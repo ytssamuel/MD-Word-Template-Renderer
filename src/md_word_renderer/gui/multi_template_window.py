@@ -329,12 +329,12 @@ class MultiTemplateWindow(ctk.CTkToplevel):
         """執行批次處理"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.template_renderer import TemplateRenderer
+            from md_word_renderer.renderer.word_renderer import WordRenderer
             
             # 解析 Markdown（只需一次）
             self.after(0, lambda: self.status_label.configure(text="解析 Markdown..."))
             parser = MarkdownParser()
-            data = parser.parse_file(self.markdown_path.get())
+            data = parser.parse(self.markdown_path.get())
             
             output_dir = Path(self.output_dir.get())
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -345,6 +345,8 @@ class MultiTemplateWindow(ctk.CTkToplevel):
             total = len(self.template_list)
             success = 0
             failed = 0
+            
+            renderer = WordRenderer()
             
             for i, (template_path, _) in enumerate(self.template_list):
                 try:
@@ -360,8 +362,7 @@ class MultiTemplateWindow(ctk.CTkToplevel):
                     output_path = output_dir / output_name
                     
                     # 渲染
-                    renderer = TemplateRenderer(template_path)
-                    renderer.render(data, str(output_path))
+                    renderer.render_to_file(data, template_path, str(output_path))
                     
                     # 成功
                     self._update_item_status(template_path, "✅ 完成")

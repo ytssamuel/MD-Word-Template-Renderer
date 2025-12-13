@@ -279,10 +279,10 @@ class BatchWindow(ctk.CTkToplevel):
         """執行批次處理"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.template_renderer import TemplateRenderer
+            from md_word_renderer.renderer.word_renderer import WordRenderer
             
             parser = MarkdownParser()
-            renderer = TemplateRenderer(self.template_path.get())
+            renderer = WordRenderer()
             output_dir = Path(self.output_dir.get())
             
             total = len(self.file_list)
@@ -298,12 +298,12 @@ class BatchWindow(ctk.CTkToplevel):
                                self.status_label.configure(text=s))
                     
                     # 解析
-                    data = parser.parse_file(md_path)
+                    data = parser.parse(md_path)
                     
                     # 渲染
                     output_name = Path(md_path).stem + ".docx"
                     output_path = output_dir / output_name
-                    renderer.render(data, str(output_path))
+                    renderer.render_to_file(data, self.template_path.get(), str(output_path))
                     
                     # 成功
                     self._update_item_status(md_path, "✅ 完成")

@@ -333,7 +333,7 @@ class MainWindow(ctk.CTk):
             from md_word_renderer.parser.markdown_parser import MarkdownParser
             
             parser = MarkdownParser()
-            data = parser.parse_file(path)
+            data = parser.parse(path)
             
             # 顯示解析結果
             self.data_preview.delete("1.0", "end")
@@ -377,12 +377,12 @@ class MainWindow(ctk.CTk):
         """執行轉換（在背景執行緒）"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.template_renderer import TemplateRenderer
+            from md_word_renderer.renderer.word_renderer import WordRenderer
             
             # 解析
             self._update_progress(0.2, "解析 Markdown...")
             parser = MarkdownParser()
-            data = parser.parse_file(self.markdown_path.get())
+            data = parser.parse(self.markdown_path.get())
             
             # 驗證（可選）
             if self.config_manager.get("validate_before_convert", True):
@@ -391,8 +391,8 @@ class MainWindow(ctk.CTk):
             
             # 渲染
             self._update_progress(0.6, "渲染 Word 文件...")
-            renderer = TemplateRenderer(self.template_path.get())
-            renderer.render(data, self.output_path.get())
+            renderer = WordRenderer()
+            renderer.render_to_file(data, self.template_path.get(), self.output_path.get())
             
             # 完成
             self._update_progress(1.0, "完成!")
@@ -494,7 +494,7 @@ MD-Word Template Renderer v1.0
             
             # 解析
             parser = MarkdownParser()
-            data = parser.parse_file(md_path)
+            data = parser.parse(md_path)
             
             # 驗證
             validator = SchemaValidator()
