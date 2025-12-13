@@ -1,5 +1,9 @@
 # MD-Word Template Renderer
 
+<p align="center">
+  <img src="assets/app_icon.png" alt="MD-Word Renderer Icon" width="128" height="128">
+</p>
+
 將結構化的 Markdown 資料渲染至 Word 模板，實現資料驅動的文件生成系統。
 
 ## 專案狀態
@@ -263,6 +267,62 @@ python md2word.py validate <input.md> [options]
 - **python-docx** 0.8+ - Word 文件處理
 - **PyYAML** 6.0+ - 設定檔解析
 - **jsonschema** 4.17+ - 資料驗證
+- **CustomTkinter** - GUI 圖形介面
+- **Click** - CLI 命令列框架
+
+## 打包為執行檔
+
+本專案支援打包為獨立執行檔，無需安裝 Python 環境即可使用。
+
+### 打包方式
+
+```bash
+# 方式 1: 使用 Python 腳本（推薦）
+python build_exe.py --version gui   # 只打包 GUI 版本
+python build_exe.py --version cli   # 只打包 CLI 版本
+python build_exe.py --version both  # 打包兩個版本
+
+# 方式 2: 直接使用 PyInstaller
+pyinstaller md_word_renderer.spec       # GUI 版本
+pyinstaller md_word_renderer_cli.spec   # CLI 版本
+```
+
+### 打包產物
+
+| 版本 | 執行檔名稱 | 說明 | 大小 |
+|------|-----------|------|------|
+| GUI | `MD-Word-Renderer.exe` | 圖形介面版本，雙擊即可使用 | ~50-80 MB |
+| CLI | `md2word.exe` | 命令列版本，用於腳本自動化 | ~30-50 MB |
+
+### 使用打包後的執行檔
+
+**GUI 版本：**
+```bash
+# 雙擊執行或命令列啟動
+.\dist\MD-Word-Renderer.exe
+```
+
+**CLI 版本：**
+```bash
+# 單一檔案轉換
+.\dist\md2word.exe render input.md template.docx output.docx
+
+# 批次轉換
+.\dist\md2word.exe batch ./inputs/ template.docx ./outputs/
+
+# 多模板批次
+.\dist\md2word.exe batch-templates data.md ./templates/ ./outputs/
+
+# 查看說明
+.\dist\md2word.exe --help
+```
+
+### 打包配置檔案
+
+- `md_word_renderer.spec` - GUI 版本打包配置
+- `md_word_renderer_cli.spec` - CLI 版本打包配置
+- `build_exe.py` - 自動化打包腳本
+- `assets/app_icon.ico` - 應用程式圖標
 
 ## 授權
 

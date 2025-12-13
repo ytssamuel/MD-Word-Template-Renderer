@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller 打包規格檔
+PyInstaller 打包規格檔 - CLI 版本
 
-用於將 MD-Word Template Renderer GUI 打包為獨立執行檔
+用於將 MD-Word Template Renderer CLI 打包為命令列執行檔
 """
 
 import sys
@@ -21,38 +21,28 @@ datas = [
     (str(ROOT_DIR / 'README.md'), '.'),
     # 應用程式圖標
     (str(ROOT_DIR / 'assets'), 'assets'),
-    # 範例模板（如果有）
-    # (str(ROOT_DIR / 'templates'), 'templates'),
 ]
 
 # 隱藏的匯入
 hiddenimports = [
-    'customtkinter',
-    'darkdetect',
     'docxtpl',
     'jinja2',
     'docx',
     'lxml',
     'lxml._elementpath',
-    'PIL',
-    'PIL._tkinter_finder',
     'yaml',
     'jsonschema',
+    'click',
     'md_word_renderer',
     'md_word_renderer.parser',
     'md_word_renderer.parser.markdown_parser',
     'md_word_renderer.renderer',
     'md_word_renderer.renderer.word_renderer',
+    'md_word_renderer.renderer.error_handler',
     'md_word_renderer.validator',
     'md_word_renderer.validator.schema_validator',
-    'md_word_renderer.gui',
-    'md_word_renderer.gui.main_window',
-    'md_word_renderer.gui.batch_window',
-    'md_word_renderer.gui.multi_template_window',
-    'md_word_renderer.gui.settings_window',
-    'md_word_renderer.gui.config_manager',
-    'md_word_renderer.gui.error_handler',
-    'md_word_renderer.gui.template_preview',
+    'md_word_renderer.cli',
+    'md_word_renderer.cli.main',
 ]
 
 # 排除的模組（減少檔案大小）
@@ -68,10 +58,14 @@ excludes = [
     'setuptools',
     'wheel',
     'pip',
+    'customtkinter',  # CLI 版本不需要 GUI 庫
+    'tkinter',
+    'PIL',
+    'darkdetect',
 ]
 
 a = Analysis(
-    ['run_gui.py'],
+    [str('md2word.py')],
     pathex=[str(SRC_DIR)],
     binaries=[],
     datas=datas,
@@ -99,14 +93,14 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='MD-Word-Renderer',
+    name='md2word',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # GUI 模式，不顯示控制台
+    console=True,  # CLI 模式，顯示控制台
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
