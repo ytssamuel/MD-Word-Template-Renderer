@@ -49,7 +49,10 @@ build/
 .env
 .env.local
 
-# referance
-referance/
-*.docx
-*.md
+# 敏感資料 - 排除真實業務資料
+referance/OH_*.md
+referance/*_real.md
+referance/*
+
+# 保留範例資料
+!referance/sample_data.md

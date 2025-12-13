@@ -106,8 +106,8 @@ python md2word.py render data.md template.docx output.docx
 每行資料遵循格式：`編號. 欄位名稱 | 值`
 
 ```markdown
-1. 系統名稱 | Super E-Billing
-2. 變更單號 | CRQ000000179030
+1. 系統名稱 | 範例系統
+2. 變更單號 | CRQ000000100000
 3. 備註 | 這是備註內容
 ```
 

@@ -24,7 +24,7 @@ class TestCLI(unittest.TestCase):
     def setUpClass(cls):
         """設定測試環境"""
         cls.test_dir = Path(__file__).parent.parent
-        cls.sample_md = cls.test_dir / 'referance' / 'OH_20251020.md'
+        cls.sample_md = cls.test_dir / 'referance' / 'sample_data.md'
         cls.template = cls.test_dir / 'templates' / 'simple_template.docx'
         cls.temp_dir = tempfile.mkdtemp()
     

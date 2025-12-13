@@ -8,7 +8,7 @@ from md_word_renderer.parser import MarkdownParser
 
 def main():
     parser = MarkdownParser()
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     # 顯示異動內容
     items = data.get('異動內容-測試案例', [])

@@ -29,7 +29,7 @@ class MarkdownParser:
         >>> parser = MarkdownParser()
         >>> data = parser.parse("data.md")
         >>> print(data["系統名稱"])
-        "Super E-Billing 帳款管理系統"
+        "範例系統"
     """
     
     # 解析單行的正則表達式

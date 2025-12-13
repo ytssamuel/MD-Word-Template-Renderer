@@ -24,7 +24,7 @@ def test_simple_render():
     
     # 解析 Markdown
     parser = MarkdownParser()
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     print(f"✓ 解析完成，共 {len([k for k in data.keys() if not k.startswith('#')])} 個欄位")
     
@@ -52,7 +52,7 @@ def test_example_render():
     
     # 解析 Markdown
     parser = MarkdownParser()
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     # 顯示測試案例數量
     test_cases = data.get('異動內容-測試案例', [])
@@ -78,7 +78,7 @@ def test_full_render():
     
     # 解析 Markdown
     parser = MarkdownParser()
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     # 資料驗證
     validator = SchemaValidator()
@@ -113,7 +113,7 @@ def test_api_usage():
     parser = MarkdownParser()
     renderer = WordRenderer()
     
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     renderer.render_to_file(
         data,
@@ -132,7 +132,7 @@ def test_data_structure():
     print("=" * 50)
     
     parser = MarkdownParser()
-    data = parser.parse('referance/OH_20251020.md')
+    data = parser.parse('referance/sample_data.md')
     
     # 驗證基本欄位
     assert '系統名稱' in data, "缺少 系統名稱"

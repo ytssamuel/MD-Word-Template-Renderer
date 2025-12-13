@@ -98,11 +98,11 @@ class TestMarkdownParser:
     
     def test_parse_simple_line(self):
         """測試簡單行解析"""
-        content = "1. 系統名稱 | Super E-Billing"
+        content = "1. 系統名稱 | 範例系統"
         result = self.parser.parse_content(content)
         
         assert "系統名稱" in result
-        assert result["系統名稱"] == "Super E-Billing"
+        assert result["系統名稱"] == "範例系統"
     
     def test_parse_empty_value(self):
         """測試空值解析"""
@@ -135,13 +135,13 @@ class TestMarkdownParser:
     
     def test_parse_numbered_access(self):
         """測試編號存取"""
-        content = """1. 系統名稱 | Super E-Billing
+        content = """1. 系統名稱 | 範例系統
 2. 版本號 | v1.0"""
         result = self.parser.parse_content(content)
         
         assert "#1" in result
         assert result["#1"]["key"] == "系統名稱"
-        assert result["#1"]["value"] == "Super E-Billing"
+        assert result["#1"]["value"] == "範例系統"
 
 
 class TestMarkdownParserIntegration:
@@ -150,10 +150,10 @@ class TestMarkdownParserIntegration:
     def setup_method(self):
         self.parser = MarkdownParser()
         # 測試資料路徑
-        self.test_file = Path(__file__).parent.parent / 'referance' / 'OH_20251020.md'
+        self.test_file = Path(__file__).parent.parent / 'referance' / 'sample_data.md'
     
     def test_parse_real_file(self):
-        """測試解析真實檔案"""
+        """測試解析範例檔案"""
         if not self.test_file.exists():
             pytest.skip(f"測試檔案不存在: {self.test_file}")
         
@@ -161,7 +161,7 @@ class TestMarkdownParserIntegration:
         
         # 基本欄位檢查
         assert "系統名稱" in result
-        assert "Super E-Billing" in result["系統名稱"]
+        assert "範例系統" in result["系統名稱"]
         
         # 列表欄位檢查
         assert "異動內容-測試案例" in result
