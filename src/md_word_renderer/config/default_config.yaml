@@ -1,0 +1,53 @@
+# MD-Word Template Renderer - 設定檔範例
+# 預設設定檔，可根據需求修改
+
+# 預設模板路徑
+template: templates/default.docx
+
+# 輸出目錄
+output_dir: output/
+
+# Markdown 解析設定
+parsing:
+  # 縮排大小（空格數）
+  indent_size: 4
+  # 是否允許混用 Tab 和空格
+  allow_mixed_indent: false
+  # 檔案編碼
+  encoding: utf-8
+
+# 渲染設定
+rendering:
+  # 找不到變數時是否顯示錯誤訊息
+  show_errors: true
+  # 錯誤訊息格式（{var} 為變數名稱佔位符）
+  error_format: "[ERROR: 變數 '{var}' 不存在]"
+  # 是否保留 Word 模板原有樣式
+  preserve_styles: true
+
+# 驗證設定
+validation:
+  # 是否啟用資料結構驗證
+  enabled: false
+  # Schema 檔案路徑（null 表示使用預設 Schema）
+  schema_path: null
+  # 驗證失敗時是否中止處理
+  strict_mode: false
+
+# 批次處理設定
+batch:
+  # 是否顯示進度
+  show_progress: true
+  # 失敗時是否繼續處理其他檔案
+  continue_on_error: true
+  # 輸出檔案命名規則（{name} 為原檔名）
+  output_pattern: "{name}.docx"
+
+# 日誌設定
+logging:
+  # 日誌等級：DEBUG, INFO, WARNING, ERROR
+  level: INFO
+  # 是否輸出到檔案
+  file_output: false
+  # 日誌檔案路徑
+  log_file: logs/renderer.log

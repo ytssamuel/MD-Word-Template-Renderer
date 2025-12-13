@@ -1,0 +1,21 @@
+# MD-Word Template Renderer - 依賴套件
+# Python 3.8+
+
+# Word 文件處理
+python-docx>=0.8.11
+docxtpl>=0.16.7
+
+# 模板引擎
+Jinja2>=3.1.2
+
+# 設定檔處理
+PyYAML>=6.0
+
+# 資料驗證
+jsonschema>=4.17.0
+
+# 開發工具
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=22.0.0
+flake8>=5.0.0

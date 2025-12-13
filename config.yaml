@@ -1,0 +1,38 @@
+# MD-Word Template Renderer - 設定檔範例
+# 複製此檔案為 config.yaml 並修改設定
+
+# 預設模板路徑
+template: templates/default.docx
+
+# 輸出目錄
+output_dir: output/
+
+# Markdown 解析設定
+parsing:
+  indent_size: 4
+  allow_mixed_indent: false
+  encoding: utf-8
+
+# 渲染設定
+rendering:
+  show_errors: true
+  error_format: "[ERROR: 變數 '{var}' 不存在]"
+  preserve_styles: true
+
+# 驗證設定
+validation:
+  enabled: false
+  schema_path: null
+  strict_mode: false
+
+# 批次處理設定
+batch:
+  show_progress: true
+  continue_on_error: true
+  output_pattern: "{name}.docx"
+
+# 日誌設定
+logging:
+  level: INFO
+  file_output: false
+  log_file: logs/renderer.log
