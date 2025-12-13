@@ -48,3 +48,8 @@ build/
 # 環境變數
 .env
 .env.local
+
+# referance
+referance/
+*.docx
+*.md
