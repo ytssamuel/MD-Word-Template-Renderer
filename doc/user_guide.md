@@ -240,7 +240,9 @@ python md2word.py render <input.md> <template.docx> <output.docx>
   python md2word.py render data.md template.docx output.docx -v
 ```
 
-### batch - 批次轉換
+### batch - 批次轉換（多 MD + 單模板）
+
+將多個 Markdown 資料檔案使用同一個模板轉換。
 
 ```bash
 python md2word.py batch <input_dir> <template.docx> <output_dir>
@@ -254,6 +256,35 @@ python md2word.py batch <input_dir> <template.docx> <output_dir>
   python md2word.py batch ./inputs/ template.docx ./outputs/ -v
   python md2word.py batch ./data/ template.docx ./out/ -p "OH_*.md"
 ```
+
+### batch-templates - 多模板批次轉換（單 MD + 多模板）
+
+將一份 Markdown 資料使用多個模板轉換，產生多個不同的 Word 文件。
+
+```bash
+python md2word.py batch-templates <input.md> <template_dir> <output_dir>
+
+選項：
+  -p, --pattern       模板搜尋模式 (預設: *.docx)
+  -v, --verbose       顯示詳細資訊
+  --continue-on-error 遇到錯誤時繼續處理其他模板
+  --prefix            輸出檔案名稱前綴
+  --suffix            輸出檔案名稱後綴（在副檔名之前）
+
+範例：
+  # 基本用法
+  python md2word.py batch-templates data.md ./templates/ ./outputs/
+  
+  # 加入前綴和後綴
+  python md2word.py batch-templates data.md ./templates/ ./outputs/ --prefix "2025_" --suffix "_final"
+  
+  # 詳細輸出
+  python md2word.py batch-templates data.md ./templates/ ./outputs/ -v
+```
+
+**使用情境：**
+- 同一份資料需要產生不同格式的報告（例如：簡報摘要、詳細報告、客戶版本）
+- 不同部門需要同一份資料的不同視角文件
 
 ### validate - 驗證資料
 

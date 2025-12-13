@@ -5,6 +5,7 @@ MD-Word Template Renderer - 命令列執行腳本
 Usage:
     python -m md2word render <input.md> <template.docx> <output.docx>
     python -m md2word batch <input_dir> <template.docx> <output_dir>
+    python -m md2word batch-templates <input.md> <template_dir> <output_dir>
     python -m md2word validate <input.md>
     python -m md2word info
 """

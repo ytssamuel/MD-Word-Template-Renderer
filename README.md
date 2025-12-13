@@ -14,15 +14,19 @@
 - ✅ 支援階層結構（透過縮排，含不規則縮排智慧偵測）
 - ✅ 基於 Jinja2 的強大模板語法
 - ✅ 資料結構驗證（JSON Schema）
-- ✅ 批次處理多個檔案
+- ✅ 批次處理多個檔案（多 MD + 單模板）
+- ✅ 多模板批次處理（單 MD + 多模板）
 - ✅ 命令列工具 (CLI)
 - ✅ 完整測試套件（43 個測試）
 
-### v2.0 新功能 (開發中)
-- 🔄 GUI 圖形介面 (CustomTkinter)
-- 🔄 即時資料預覽
-- 🔄 批次處理視覺化
-- 🔄 設定持久化
+### v2.0 新功能
+- ✅ GUI 圖形介面 (CustomTkinter)
+- ✅ 即時資料預覽
+- ✅ 批次處理視覺化
+- ✅ 多模板批次處理視窗
+- ✅ 設定持久化
+- ✅ 模板變數預覽
+- ✅ 友善錯誤處理
 - 🔄 打包為獨立執行檔
 
 ## 快速開始
@@ -60,8 +64,11 @@ python run_gui.py
 # 單一檔案轉換
 python md2word.py render input.md template.docx output.docx
 
-# 批次轉換
+# 批次轉換（多個 MD 檔 + 一個模板 → 多個 Word）
 python md2word.py batch ./inputs/ template.docx ./outputs/
+
+# 多模板批次轉換（一個 MD 檔 + 多個模板 → 多個 Word）
+python md2word.py batch-templates data.md ./templates/ ./outputs/
 
 # 驗證 Markdown 格式
 python md2word.py validate input.md

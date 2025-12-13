@@ -105,7 +105,7 @@ class MainWindow(ctk.CTk):
         toolbar = ctk.CTkFrame(self)
         toolbar.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         
-        # 批次處理按鈕
+        # 批次處理按鈕（多個 MD + 一個模板）
         btn_batch = ctk.CTkButton(
             toolbar,
             text="📁 批次處理",
@@ -113,6 +113,15 @@ class MainWindow(ctk.CTk):
             command=self._open_batch_window
         )
         btn_batch.pack(side="left", padx=5)
+        
+        # 多模板批次處理按鈕（一個 MD + 多個模板）
+        btn_multi_template = ctk.CTkButton(
+            toolbar,
+            text="📋 多模板批次",
+            width=110,
+            command=self._open_multi_template_window
+        )
+        btn_multi_template.pack(side="left", padx=5)
         
         # 設定按鈕
         btn_settings = ctk.CTkButton(
@@ -436,6 +445,11 @@ class MainWindow(ctk.CTk):
         """開啟設定視窗"""
         from .settings_window import SettingsWindow
         SettingsWindow(self, self.config_manager)
+    
+    def _open_multi_template_window(self) -> None:
+        """開啟多模板批次處理視窗"""
+        from .multi_template_window import MultiTemplateWindow
+        MultiTemplateWindow(self)
     
     def _show_help(self) -> None:
         """顯示說明"""

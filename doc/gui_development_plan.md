@@ -183,21 +183,20 @@ pip install customtkinter
 
 ## 四、功能模組設計
 
-### 4.1 模組結構
+### 4.1 模組結構（已完成）
 
 ```
 src/md_word_renderer/
-├── gui/                      # GUI 模組（新增）
-│   ├── __init__.py
-│   ├── main_window.py        # 主視窗
-│   ├── batch_window.py       # 批次處理視窗
-│   ├── settings_window.py    # 設定視窗
-│   ├── preview_widget.py     # 資料預覽元件
-│   ├── file_selector.py      # 檔案選擇元件
-│   ├── progress_widget.py    # 進度顯示元件
-│   ├── theme_manager.py      # 主題管理
-│   └── config_manager.py     # 設定管理
-├── parser/                   # 解析器（已完成）
+├── gui/                           # GUI 模組
+│   ├── __init__.py               # 模組匯出
+│   ├── main_window.py            # ✅ 主視窗
+│   ├── batch_window.py           # ✅ 批次處理視窗（多MD+單模板）
+│   ├── multi_template_window.py  # ✅ 多模板批次視窗（單MD+多模板）
+│   ├── settings_window.py        # ✅ 設定視窗
+│   ├── template_preview.py       # ✅ 模板變數預覽
+│   ├── error_handler.py          # ✅ 錯誤處理器
+│   └── config_manager.py         # ✅ 設定管理
+├── parser/                        # 解析器（已完成）
 ├── renderer/                 # 渲染器（已完成）
 ├── validator/                # 驗證器（已完成）
 ├── cli/                      # CLI 工具（已完成）

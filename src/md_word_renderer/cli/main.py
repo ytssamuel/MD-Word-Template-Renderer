@@ -37,8 +37,11 @@ def create_parser() -> argparse.ArgumentParser:
   # 單一檔案轉換
   md2word render input.md template.docx output.docx
   
-  # 批次轉換
+  # 批次轉換（多個 MD 檔 + 一個模板）
   md2word batch ./inputs/ template.docx ./outputs/
+  
+  # 多模板批次轉換（一個 MD 檔 + 多個模板）
+  md2word batch-templates data.md ./templates/ ./outputs/
   
   # 驗證 Markdown 格式
   md2word validate input.md
@@ -109,6 +112,49 @@ def create_parser() -> argparse.ArgumentParser:
         '--continue-on-error',
         action='store_true',
         help='遇到錯誤時繼續處理其他檔案'
+    )
+    
+    # batch-templates 子指令 (1個md + n個模板 → n個word)
+    batch_tpl_parser = subparsers.add_parser(
+        'batch-templates', 
+        help='使用多個模板渲染同一份 Markdown 資料'
+    )
+    batch_tpl_parser.add_argument(
+        'input', 
+        help='輸入的 Markdown 檔案路徑'
+    )
+    batch_tpl_parser.add_argument(
+        'template_dir', 
+        help='模板目錄（包含 .docx 檔案）'
+    )
+    batch_tpl_parser.add_argument(
+        'output_dir', 
+        help='輸出目錄'
+    )
+    batch_tpl_parser.add_argument(
+        '-p', '--pattern',
+        default='*.docx',
+        help='模板搜尋模式 (預設: *.docx)'
+    )
+    batch_tpl_parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='顯示詳細資訊'
+    )
+    batch_tpl_parser.add_argument(
+        '--continue-on-error',
+        action='store_true',
+        help='遇到錯誤時繼續處理其他模板'
+    )
+    batch_tpl_parser.add_argument(
+        '--prefix',
+        default='',
+        help='輸出檔案名稱前綴'
+    )
+    batch_tpl_parser.add_argument(
+        '--suffix',
+        default='',
+        help='輸出檔案名稱後綴（在副檔名之前）'
     )
     
     # validate 子指令
@@ -280,6 +326,96 @@ def cmd_batch(args: argparse.Namespace) -> int:
     return 0 if fail_count == 0 else 1
 
 
+def cmd_batch_templates(args: argparse.Namespace) -> int:
+    """
+    使用多個模板渲染同一份 Markdown 資料
+    
+    Args:
+        args: 命令列參數
+        
+    Returns:
+        int: 結束代碼 (0=全部成功, 1=部分失敗)
+    """
+    input_path = Path(args.input)
+    template_dir = Path(args.template_dir)
+    output_dir = Path(args.output_dir)
+    
+    # 檢查輸入檔案
+    if not input_path.exists():
+        print(f"❌ 錯誤：找不到輸入檔案 {input_path}")
+        return 1
+    
+    # 檢查模板目錄
+    if not template_dir.exists():
+        print(f"❌ 錯誤：找不到模板目錄 {template_dir}")
+        return 1
+    
+    # 搜尋模板檔案
+    template_files = list(template_dir.glob(args.pattern))
+    
+    if not template_files:
+        print(f"⚠ 警告：在 {template_dir} 中找不到符合 {args.pattern} 的模板檔案")
+        return 1
+    
+    print(f"📂 找到 {len(template_files)} 個模板待處理")
+    
+    # 確保輸出目錄存在
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 解析 Markdown（只需解析一次）
+    try:
+        print(f"📄 解析 Markdown: {input_path}")
+        parser = MarkdownParser()
+        data = parser.parse(str(input_path))
+        
+        field_count = len([k for k in data.keys() if not k.startswith('#')])
+        print(f"   ✓ 解析完成，共 {field_count} 個欄位")
+    except Exception as e:
+        print(f"❌ 解析 Markdown 失敗：{e}")
+        return 1
+    
+    # 初始化
+    renderer = WordRenderer()
+    
+    success_count = 0
+    fail_count = 0
+    
+    # 批次處理各模板
+    for template_file in template_files:
+        # 組合輸出檔名
+        output_name = f"{args.prefix}{template_file.stem}{args.suffix}.docx"
+        output_file = output_dir / output_name
+        
+        try:
+            if args.verbose:
+                print(f"\n處理模板: {template_file.name}")
+            
+            # 渲染
+            renderer.load_template(str(template_file))
+            renderer.render(data)
+            renderer.save(str(output_file))
+            
+            if args.verbose:
+                print(f"   ✓ 輸出至 {output_file.name}")
+            
+            success_count += 1
+            
+        except Exception as e:
+            print(f"   ✗ 失敗: {template_file.name} - {e}")
+            fail_count += 1
+            
+            if not args.continue_on_error:
+                print("終止批次處理（使用 --continue-on-error 可繼續處理其他模板）")
+                break
+    
+    # 顯示結果
+    print(f"\n📊 多模板批次處理完成")
+    print(f"   ✓ 成功: {success_count} 個")
+    print(f"   ✗ 失敗: {fail_count} 個")
+    
+    return 0 if fail_count == 0 else 1
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     """
     執行資料驗證
@@ -403,6 +539,8 @@ def cli(args: Optional[List[str]] = None) -> int:
         return cmd_render(parsed_args)
     elif parsed_args.command == 'batch':
         return cmd_batch(parsed_args)
+    elif parsed_args.command == 'batch-templates':
+        return cmd_batch_templates(parsed_args)
     elif parsed_args.command == 'validate':
         return cmd_validate(parsed_args)
     elif parsed_args.command == 'info':
