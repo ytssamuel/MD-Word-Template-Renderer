@@ -156,9 +156,33 @@
 {{/table}}
 ```
 
-#### 圖片插入
+#### 圖片插入（已實作）
+
+**Markdown 語法：**
+```markdown
+![替代文字](圖片路徑)
 ```
-{{#image 圖片路徑 width=200 height=150}}
+
+**範例：**
+```markdown
+16. 異動內容-測試案例 | 
+    1. 功能測試
+       1. ![screenshot](images/test_001.png)
+```
+
+**解析結果：**
+- `type`: "image"
+- `value`: "screenshot" (替代文字)
+- `image_path`: 絕對路徑
+- `image_alt`: "screenshot"
+
+**Word 模板中使用：**
+```jinja2
+{% for item in data["異動內容-測試案例"] %}
+  {% if item.type == "image" %}
+    {{item.value}}  {# 自動渲染為圖片 #}
+  {% endif %}
+{% endfor %}
 ```
 
 ---
@@ -278,7 +302,7 @@
 
 ### Phase 3：擴充功能（待辦）
 - [ ] 表格渲染
-- [ ] 圖片插入
+- [x] 圖片插入
 - [ ] 自訂格式（粗體、顏色等）
 - [ ] 樣式保留
 

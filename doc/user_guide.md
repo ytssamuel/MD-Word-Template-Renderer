@@ -153,6 +153,47 @@ python md2word.py render data.md template.docx output.docx
 | `\'` | 單引號 |
 | `\"` | 雙引號 |
 
+### 圖片語法
+
+使用標準 Markdown 圖片語法嵌入圖片：
+
+```markdown
+![替代文字](圖片路徑)
+```
+
+**範例：**
+
+```markdown
+16. 異動內容-測試案例 | 
+    1. 調整供應商登入之密碼功能
+       1. 新增供應商使用者
+          1. ![2025-11-01_104655](17. 異動內容-測試案例/1. 調整/image.png)
+```
+
+**重要說明：**
+- 圖片路徑可以是相對路徑（相對於 Markdown 檔案所在目錄）
+- 替代文字會被保存為圖片說明
+- 支援的圖片格式：PNG、JPG、JPEG、GIF、BMP
+- 圖片會自動轉換為 Word 中的 InlineImage
+
+**解析結果範例：**
+
+```json
+{
+  "type": "image",
+  "number": "1",
+  "value": "2025-11-01_104655",
+  "image_path": "C:\\absolute\\path\\to\\image.png",
+  "image_alt": "2025-11-01_104655",
+  "image": "<InlineImage 物件，渲染時自動產生>",
+  "children": []
+}
+```
+
+**在模板中使用圖片：**
+- `{{item.value}}` - 輸出替代文字（純文字）
+- `{{item.image}}` - 輸出圖片本身（InlineImage 物件）
+
 ---
 
 ## Word 模板語法
@@ -360,6 +401,54 @@ for case in test_cases:
 
 # 透過編號存取
 first_field = data['#1']  # {'key': '系統名稱', 'value': '...'}
+```
+
+### 處理圖片
+
+解析含有圖片的資料後，圖片項目會有特殊的 `type` 屬性：
+
+```python
+from md_word_renderer import MarkdownParser, WordRenderer
+from docx.shared import Cm
+
+parser = MarkdownParser()
+data = parser.parse('data_with_images.md')
+
+# 遍歷尋找圖片
+def find_images(items):
+    for item in items:
+        if item.get('type') == 'image':
+            print(f"找到圖片: {item['image_path']}")
+            print(f"  替代文字: {item['image_alt']}")
+        if item.get('children'):
+            find_images(item['children'])
+
+# 尋找測試案例中的圖片
+test_cases = data.get('異動內容-測試案例', [])
+find_images(test_cases)
+```
+
+### 渲染含圖片的資料
+
+```python
+from md_word_renderer import WordRenderer
+from docx.shared import Cm
+
+# 建立渲染器，設定圖片尺寸
+renderer = WordRenderer(image_width=Cm(15), image_height=None)
+
+# 渲染資料（圖片會自動處理）
+renderer.load_template('template.docx')
+renderer.render(data)
+
+# 檢查是否有遺失的圖片
+missing_images = renderer.get_missing_images()
+if missing_images:
+    print("警告：以下圖片檔案不存在：")
+    for img in missing_images:
+        print(f"  - {img}")
+
+renderer.save('output.docx')
 ```
 
 ---

@@ -170,5 +170,94 @@ class TestMarkdownParserIntegration:
         assert "#1" in result
 
 
+class TestImageParsing:
+    """圖片解析測試"""
+    
+    def setup_method(self):
+        self.parser = MarkdownParser()
+    
+    def test_parse_image_syntax(self):
+        """測試解析圖片語法"""
+        content = """1. 測試案例 | 
+   1. 截圖1
+      1. ![image1](path/to/image1.png)
+      2. ![image2](path/to/image2.png)"""
+        
+        result = self.parser.parse_content(content)
+        
+        assert "測試案例" in result
+        test_cases = result["測試案例"]
+        assert len(test_cases) == 1
+        
+        # 檢查子項目
+        first_child = test_cases[0]
+        assert first_child["value"] == "截圖1"
+        assert len(first_child["children"]) == 2
+        
+        # 檢查圖片項目
+        img1 = first_child["children"][0]
+        assert img1["type"] == "image"
+        assert img1["value"] == "image1"
+        assert "path/to/image1.png" in img1["image_path"]
+    
+    def test_parse_image_with_alt_text(self):
+        """測試解析帶有 alt 文字的圖片"""
+        content = """1. 測試 | 
+   1. ![這是描述文字](images/test.png)"""
+        
+        result = self.parser.parse_content(content)
+        
+        test_items = result["測試"]
+        img = test_items[0]
+        assert img["type"] == "image"
+        assert img["value"] == "這是描述文字"
+        assert img["image_alt"] == "這是描述文字"
+    
+    def test_parse_mixed_content(self):
+        """測試解析混合內容（文字和圖片）"""
+        content = """1. 步驟 | 
+   1. 第一步
+   2. ![截圖](img/step1.png)
+   3. 第三步"""
+        
+        result = self.parser.parse_content(content)
+        
+        steps = result["步驟"]
+        assert len(steps) == 3
+        assert steps[0]["type"] == "text"
+        assert steps[0]["value"] == "第一步"
+        assert steps[1]["type"] == "image"
+        assert steps[2]["type"] == "text"
+        assert steps[2]["value"] == "第三步"
+    
+    def test_parse_sample_data_with_images(self):
+        """測試解析含圖片的範例資料"""
+        test_file = Path(__file__).parent.parent / 'referance' / 'sample_data.md'
+        if not test_file.exists():
+            pytest.skip(f"測試檔案不存在: {test_file}")
+        
+        result = self.parser.parse(str(test_file))
+        
+        # 檢查異動內容中的圖片
+        test_cases = result.get("異動內容-測試案例", [])
+        assert len(test_cases) > 0
+        
+        # 找到包含圖片的子項目
+        first_case = test_cases[0]
+        assert first_case["value"] == "調整供應商登入之密碼功能"
+        
+        # 檢查是否有圖片類型的子項目
+        has_images = False
+        for child in first_case.get("children", []):
+            for sub_child in child.get("children", []):
+                if sub_child.get("type") == "image":
+                    has_images = True
+                    assert "image_path" in sub_child
+                    assert sub_child["image_path"].endswith(".png")
+                    break
+        
+        assert has_images, "應該找到至少一個圖片"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

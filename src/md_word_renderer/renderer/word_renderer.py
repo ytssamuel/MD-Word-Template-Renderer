@@ -2,6 +2,7 @@
 Word 渲染器
 
 使用 docxtpl 將資料渲染至 Word 模板
+支援圖片插入功能
 """
 
 from pathlib import Path
@@ -10,6 +11,13 @@ from typing import Dict, Any, Optional
 from docxtpl import DocxTemplate
 
 from .error_handler import RenderErrorHandler
+from .image_handler import ImageHandler
+
+try:
+    from docx.shared import Cm, Mm
+    HAS_DOCX_SHARED = True
+except ImportError:
+    HAS_DOCX_SHARED = False
 
 
 class RenderError(Exception):
@@ -26,6 +34,7 @@ class WordRenderer:
     - 變數替換（Jinja2 語法）
     - 條件渲染 {% if %}
     - 迴圈渲染 {% for %}
+    - 圖片插入（InlineImage）
     - 錯誤處理
     
     Example:
@@ -35,17 +44,27 @@ class WordRenderer:
         >>> renderer.save("output.docx")
     """
     
-    def __init__(self, show_errors: bool = True):
+    # 預設圖片最大寬度（15 公分）
+    DEFAULT_IMAGE_WIDTH = Cm(15) if HAS_DOCX_SHARED else None
+    
+    def __init__(self, show_errors: bool = True, 
+                 image_width: Optional[Any] = None,
+                 image_height: Optional[Any] = None):
         """
         初始化渲染器
         
         Args:
             show_errors: 是否在輸出中顯示錯誤訊息
+            image_width: 圖片寬度（docx.shared 單位，如 Cm(15)）
+            image_height: 圖片高度（docx.shared 單位）
         """
         self.template: Optional[DocxTemplate] = None
         self.data: Optional[Dict[str, Any]] = None
         self.error_handler = RenderErrorHandler(show_errors=show_errors)
         self.show_errors = show_errors
+        self.image_handler: Optional[ImageHandler] = None
+        self.image_width = image_width or self.DEFAULT_IMAGE_WIDTH
+        self.image_height = image_height
     
     def load_template(self, template_path: str) -> None:
         """
@@ -86,13 +105,29 @@ class WordRenderer:
         
         self.data = data
         
+        # 初始化圖片處理器
+        self.image_handler = ImageHandler(
+            template=self.template,
+            max_width=self.image_width,
+            max_height=self.image_height
+        )
+        
+        # 處理資料中的圖片
+        processed_data = self.image_handler.process_data(data)
+        
         # 準備渲染上下文
-        context = self._prepare_context(data)
+        context = self._prepare_context(processed_data)
         
         try:
             self.template.render(context)
         except Exception as e:
             raise RenderError(f"渲染失敗: {e}")
+    
+    def get_missing_images(self) -> list:
+        """取得渲染過程中找不到的圖片列表"""
+        if self.image_handler:
+            return self.image_handler.get_missing_images()
+        return []
     
     def save(self, output_path: str) -> None:
         """

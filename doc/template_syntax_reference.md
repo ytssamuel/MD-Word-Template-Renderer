@@ -557,6 +557,87 @@
 {% endfor %}
 ```
 
+### 7.6 圖片處理
+
+Markdown 資料中的圖片會被自動解析並轉換為 Word 中的 InlineImage。
+
+#### Markdown 圖片語法
+
+```markdown
+![替代文字](圖片路徑)
+```
+
+#### 圖片資料結構
+
+解析後的圖片項目包含以下屬性：
+
+| 屬性 | 說明 | 範例 |
+|------|------|------|
+| `type` | 項目類型 | `"image"` |
+| `value` | 替代文字 | `"2025-11-01_104655"` |
+| `image_path` | 圖片絕對路徑 | `"C:\\path\\to\\image.png"` |
+| `image_alt` | 替代文字（同 value） | `"2025-11-01_104655"` |
+| `image` | InlineImage 物件（渲染後自動產生） | InlineImage 物件 |
+
+#### 在模板中使用圖片
+
+圖片會自動轉換為 `InlineImage` 物件，存放在 `image` 屬性中：
+
+```jinja2
+{# 基本圖片輸出 #}
+{% for item in data["異動內容-測試案例"] %}
+  {% for child in item.children %}
+    {% if child.type == "image" %}
+      {{child.image}}  {# 這裡會輸出圖片 #}
+    {% else %}
+      {{child.value}}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+```
+
+**注意**：
+- `{{child.value}}` - 輸出替代文字（純文字）
+- `{{child.image}}` - 輸出圖片本身（InlineImage 物件）
+
+#### 深層巢狀中的圖片
+
+```jinja2
+{# 遞迴處理深層圖片 #}
+{% macro render_items(items) %}
+  {% for item in items %}
+    {% if item.type == "image" %}
+      {{item.image}}  {# 輸出圖片 #}
+    {% else %}
+      {{item.number}}. {{item.value}}
+    {% endif %}
+    {% if item.children %}
+      {{ render_items(item.children) }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{{ render_items(data["異動內容-測試案例"]) }}
+```
+
+#### 注意事項
+
+1. **路徑解析**：相對路徑會自動轉換為絕對路徑（相對於 Markdown 檔案所在目錄）
+2. **圖片格式**：支援 PNG、JPG、JPEG、GIF、BMP
+3. **遺失圖片**：如果圖片檔案不存在，會顯示替代文字並記錄警告
+4. **圖片尺寸**：預設寬度為 15cm，可透過 Python API 自訂
+
+```python
+from md_word_renderer import WordRenderer
+from docx.shared import Cm
+
+# 自訂圖片尺寸
+renderer = WordRenderer(
+    image_width=Cm(10),   # 寬度 10cm
+    image_height=Cm(8)    # 高度 8cm（可選）
+)
+```
+
 ---
 
 ## 8. 常見問題與錯誤

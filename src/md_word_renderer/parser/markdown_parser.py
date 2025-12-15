@@ -24,6 +24,7 @@ class MarkdownParser:
     
     格式：編號. 欄位名稱 | 值
     支援階層結構（透過縮排）
+    支援圖片：![alt](path)
     
     Example:
         >>> parser = MarkdownParser()
@@ -39,6 +40,9 @@ class MarkdownParser:
     # 子項目格式（無管線符號）
     CHILD_PATTERN = re.compile(r'^(\d+)\.\s+(.+)$')
     
+    # 圖片格式：![alt](path)
+    IMAGE_PATTERN = re.compile(r'^!\[([^\]]*)\]\(([^)]+)\)$')
+    
     def __init__(self, indent_size: int = 4):
         """
         初始化解析器
@@ -49,6 +53,7 @@ class MarkdownParser:
         self.indent_detector = IndentDetector(indent_size=indent_size)
         self.escape_handler = EscapeHandler()
         self.indent_size = indent_size
+        self._source_dir: Optional[Path] = None  # 來源檔案所在目錄（用於解析相對圖片路徑）
     
     def parse(self, filepath: str, encoding: str = 'utf-8') -> Dict[str, Any]:
         """
@@ -65,25 +70,32 @@ class MarkdownParser:
             FileNotFoundError: 檔案不存在
             ParseError: 解析失敗
         """
-        path = Path(filepath)
+        path = Path(filepath).resolve()
         if not path.exists():
             raise FileNotFoundError(f"檔案不存在: {filepath}")
+        
+        # 記住來源目錄，用於解析相對圖片路徑
+        self._source_dir = path.parent
         
         with open(path, 'r', encoding=encoding) as f:
             content = f.read()
         
         return self.parse_content(content)
     
-    def parse_content(self, content: str) -> Dict[str, Any]:
+    def parse_content(self, content: str, source_dir: Optional[Path] = None) -> Dict[str, Any]:
         """
         解析 Markdown 內容字串
         
         Args:
             content: Markdown 內容
+            source_dir: 來源目錄（用於解析相對圖片路徑）
             
         Returns:
             dict: 結構化的資料字典
         """
+        if source_dir:
+            self._source_dir = source_dir
+            
         lines = content.split('\n')
         
         # 偵測縮排類型
@@ -136,25 +148,71 @@ class MarkdownParser:
                     'number': number.strip(),
                     'key': key.strip(),
                     'value': self.escape_handler.unescape(value.strip()),
-                    'children': []
+                    'children': [],
+                    'type': 'field'
                 })
                 continue
             
-            # 嘗試解析為子項目格式（編號. 內容）
+            # 嘗試解析為子項目格式（編號. 內容）- 包含可能的圖片
             child_match = self.CHILD_PATTERN.match(stripped)
             if child_match:
                 number, value = child_match.groups()
-                items.append({
-                    'line_num': line_num,
-                    'level': level,
-                    'number': number.strip(),
-                    'key': None,  # 子項目沒有 key
-                    'value': self.escape_handler.unescape(value.strip()),
-                    'children': []
-                })
+                value = value.strip()
+                
+                # 檢查值是否為圖片格式
+                image_match = self.IMAGE_PATTERN.match(value)
+                if image_match:
+                    alt_text, image_path = image_match.groups()
+                    # 解析圖片路徑（轉為絕對路徑）
+                    abs_image_path = self._resolve_image_path(image_path)
+                    items.append({
+                        'line_num': line_num,
+                        'level': level,
+                        'number': number.strip(),
+                        'key': None,
+                        'value': alt_text,  # 使用 alt 文字作為值
+                        'children': [],
+                        'type': 'image',
+                        'image_path': abs_image_path,
+                        'image_alt': alt_text
+                    })
+                else:
+                    items.append({
+                        'line_num': line_num,
+                        'level': level,
+                        'number': number.strip(),
+                        'key': None,
+                        'value': self.escape_handler.unescape(value),
+                        'children': [],
+                        'type': 'text'
+                    })
                 continue
         
         return items
+    
+    def _resolve_image_path(self, image_path: str) -> str:
+        """
+        解析圖片路徑，將相對路徑轉為絕對路徑
+        
+        Args:
+            image_path: 圖片路徑（可能是相對路徑）
+            
+        Returns:
+            str: 絕對路徑
+        """
+        path = Path(image_path)
+        
+        # 如果是絕對路徑，直接返回
+        if path.is_absolute():
+            return str(path)
+        
+        # 如果有來源目錄，使用來源目錄解析相對路徑
+        if self._source_dir:
+            abs_path = (self._source_dir / path).resolve()
+            return str(abs_path)
+        
+        # 否則返回原始路徑
+        return image_path
     
     def _build_hierarchy(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -179,19 +237,26 @@ class MarkdownParser:
         
         for item in items:
             level = item['level']
+            item_type = item.get('type', 'text')
             
             # 建立子項目資料結構
             child_data = {
                 'number': item['number'],
                 'value': item['value'],
-                'children': []
+                'children': [],
+                'type': item_type
             }
+            
+            # 如果是圖片類型，添加圖片相關欄位
+            if item_type == 'image':
+                child_data['image_path'] = item.get('image_path', '')
+                child_data['image_alt'] = item.get('image_alt', '')
             
             # 彈出所有層級 >= 當前層級的項目
             while stack and stack[-1][0] >= level:
                 stack.pop()
             
-            if level == 0 and item['key']:
+            if level == 0 and item.get('key'):
                 # 頂層項目（有 key 的主欄位）
                 key_name = item['key']
                 

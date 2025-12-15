@@ -10,9 +10,10 @@
 
 ✅ **v1.0 已完成** - 核心功能穩定運行  
 ✅ **v2.0 已完成** - GUI 圖形介面全功能上線  
+✅ **v2.1 已完成** - 圖片插入功能  
 📦 **打包發布** - 獨立執行檔可直接使用
 
-[![Tests](https://img.shields.io/badge/tests-43%20passed-success)](test/)  
+[![Tests](https://img.shields.io/badge/tests-47%20passed-success)](test/)  
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)  
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -25,7 +26,14 @@
 - ✅ **雙重索引** - 支援名稱和編號兩種存取方式
 - ✅ **批次處理** - 多 MD + 單模板 / 單 MD + 多模板
 - ✅ **CLI 工具** - 完整的命令列介面，適合自動化
-- ✅ **測試覆蓋** - 43 個單元測試確保品質
+- ✅ **測試覆蓋** - 47 個單元測試確保品質
+
+### 🖼️ 圖片插入 (v2.1 NEW)
+- ✅ **Markdown 圖片語法** - 支援 `![alt](path)` 標準語法
+- ✅ **自動路徑解析** - 相對路徑自動轉換為絕對路徑
+- ✅ **Word InlineImage** - 圖片自動嵌入 Word 文件
+- ✅ **尺寸控制** - 可自訂圖片寬高
+- ✅ **多格式支援** - PNG、JPG、GIF、BMP 等
 
 ### 🖥️ 圖形介面 (v2.0)
 - ✅ **現代化 GUI** - 基於 CustomTkinter 的美觀介面
@@ -150,6 +158,7 @@ renderer.render_to_file(data, 'template.docx', 'output.docx')
 - 階層：使用縮排（空格或 Tab，支援不規則縮排）
 - 特殊字元：使用反斜線轉義（`\|`, `\n`）
 - 空值：`欄位名稱 |` （值為空）
+- 圖片：`![alt文字](圖片路徑)` ✨ NEW
 
 ## Word 模板語法
 
@@ -182,6 +191,21 @@ renderer.render_to_file(data, 'template.docx', 'output.docx')
 {{loop.index}}. {{item.value}}
   {% for child in item.children %}
   {{child.number}}. {{child.value}}
+  {% endfor %}
+{% endfor %}
+```
+
+### 圖片渲染 ✨ NEW
+
+```jinja2
+{# 圖片項目的 type 會是 "image" #}
+{% for item in data["異動內容-測試案例"] %}
+  {% for child in item.children %}
+    {% if child.type == "image" %}
+      {{child.image}}  {# 輸出圖片 #}
+    {% else %}
+      {{child.value}}  {# 輸出文字 #}
+    {% endif %}
   {% endfor %}
 {% endfor %}
 ```
@@ -219,6 +243,7 @@ SpeedBOT/
 │   │   └── escape_handler.py     # 特殊字元處理
 │   ├── renderer/                 # Word 渲染引擎
 │   │   ├── word_renderer.py      # 主渲染器
+│   │   ├── image_handler.py      # 圖片處理 ✨ NEW
 │   │   └── error_handler.py      # 錯誤處理
 │   ├── validator/                # 資料驗證
 │   │   └── schema_validator.py   # JSON Schema 驗證
