@@ -12,6 +12,18 @@ import shutil
 from pathlib import Path
 import argparse
 
+# 守門員：避免 cp950 上 Unicode 符號無法輸出（v2.2.1 新增）
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (ValueError, AttributeError):
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except (ValueError, AttributeError):
+        pass
+
 
 def clean_build():
     """清理先前的打包產物"""

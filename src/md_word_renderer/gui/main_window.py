@@ -1,7 +1,7 @@
 """
 主視窗
 
-MD-Word Template Renderer GUI 主視窗實現
+MD-Word/Excel Template Renderer GUI 主視窗實現
 """
 
 import customtkinter as ctk
@@ -13,6 +13,7 @@ from tkinter import filedialog, messagebox
 
 from .config_manager import ConfigManager
 from .error_handler import GUIErrorHandler, ErrorCode
+from md_word_renderer.renderer.factory import build_renderer, detect_format, output_extension_for
 
 
 class MainWindow(ctk.CTk):
@@ -24,15 +25,15 @@ class MainWindow(ctk.CTk):
     
     def __init__(self):
         super().__init__()
-        
+
         # 設定管理器
         self.config_manager = ConfigManager()
-        
+
         # 載入設定
         self._apply_settings()
-        
+
         # 設定視窗
-        self.title("MD-Word Template Renderer")
+        self.title("MD-Word/Excel Template Renderer")
         self._configure_window()
         
         # 檔案路徑變數
@@ -190,26 +191,27 @@ class MainWindow(ctk.CTk):
         ).grid(row=0, column=2, padx=10, pady=5)
         
         # 模板檔案
-        ctk.CTkLabel(frame, text="📋 Word 模板:").grid(
+        self.template_label = ctk.CTkLabel(frame, text="📋 Word/Excel 模板:")
+        self.template_label.grid(
             row=1, column=0, sticky="w", padx=10, pady=5
         )
         ctk.CTkEntry(frame, textvariable=self.template_path).grid(
             row=1, column=1, sticky="ew", padx=5, pady=5
         )
-        
+
         template_btn_frame = ctk.CTkFrame(frame, fg_color="transparent")
         template_btn_frame.grid(row=1, column=2, padx=5, pady=5)
-        
+
         ctk.CTkButton(
             template_btn_frame, text="瀏覽", width=60,
             command=lambda: self._browse_file("template")
         ).pack(side="left", padx=2)
-        
+
         ctk.CTkButton(
             template_btn_frame, text="🔍", width=30,
             command=self._open_template_preview
         ).pack(side="left", padx=2)
-        
+
         # 輸出檔案
         ctk.CTkLabel(frame, text="💾 輸出檔案:").grid(
             row=2, column=0, sticky="w", padx=10, pady=5
@@ -221,7 +223,7 @@ class MainWindow(ctk.CTk):
             frame, text="瀏覽...", width=80,
             command=lambda: self._browse_file("output")
         ).grid(row=2, column=2, padx=10, pady=5)
-        
+
         # 轉換按鈕
         self.btn_convert = ctk.CTkButton(
             frame,
@@ -231,6 +233,17 @@ class MainWindow(ctk.CTk):
             command=self._start_conversion
         )
         self.btn_convert.grid(row=3, column=0, columnspan=3, pady=15)
+
+        # 格式標籤（顯示目前偵測到的輸出格式）
+        self.format_label = ctk.CTkLabel(
+            frame,
+            text="🔎 輸出格式: (尚未選擇樣板)",
+            anchor="w",
+        )
+        self.format_label.grid(row=4, column=0, columnspan=3, sticky="w", padx=10)
+
+        # 當使用者變更樣板路徑時，重新整理格式標籤與輸出預設
+        self.template_path.trace_add("write", lambda *_: self._on_template_changed())
     
     def _create_preview_section(self) -> None:
         """建立預覽區"""
@@ -296,34 +309,90 @@ class MainWindow(ctk.CTk):
         elif file_type == "template":
             initial_dir = self.config_manager.get("default_template_dir", "")
             path = filedialog.askopenfilename(
-                title="選擇 Word 模板",
-                filetypes=[("Word 文件", "*.docx"), ("所有檔案", "*.*")],
+                title="選擇 Word/Excel 模板",
+                filetypes=[
+                    ("Word 文件", "*.docx"),
+                    ("Excel 樣板", "*.xlsx"),
+                    ("所有檔案", "*.*"),
+                ],
                 initialdir=initial_dir or None
             )
             if path:
                 self.template_path.set(path)
                 self.config_manager.set("last_template_file", path)
-                
+                self._on_template_changed()
+
         elif file_type == "output":
             initial_dir = self.config_manager.get("default_output_dir", "")
+            ext = self._detect_template_extension()
+            filetypes = {
+                ".docx": [("Word 文件", "*.docx")],
+                ".xlsx": [("Excel 活頁簿", "*.xlsx")],
+            }.get(ext, [("Word 文件", "*.docx"), ("Excel 活頁簿", "*.xlsx")])
             path = filedialog.asksaveasfilename(
                 title="儲存輸出檔案",
-                filetypes=[("Word 文件", "*.docx")],
-                defaultextension=".docx",
+                filetypes=filetypes,
+                defaultextension=ext or ".docx",
                 initialdir=initial_dir or None
             )
             if path:
                 self.output_path.set(path)
-    
+
+    def _on_template_changed(self) -> None:
+        """樣板路徑變更時同步：格式標籤 / 輸出檔名預設"""
+        template = self.template_path.get()
+        if not template:
+            if hasattr(self, "format_label"):
+                self.format_label.configure(text="🔎 輸出格式: (尚未選擇樣板)")
+            return
+
+        try:
+            fmt = detect_format(template)
+        except ValueError:
+            if hasattr(self, "format_label"):
+                self.format_label.configure(text="🔎 輸出格式: (不支援的副檔名)")
+            return
+
+        if hasattr(self, "format_label"):
+            self.format_label.configure(text=f"🔎 輸出格式: {fmt}")
+
+        # 若輸出檔案是空的或副檔名與新格式不符，自動修正
+        ext = f".{fmt}"
+        current = self.output_path.get()
+        if not current:
+            md = self.markdown_path.get()
+            if md:
+                mp = Path(md)
+                output_dir = self.config_manager.get("default_output_dir")
+                if output_dir:
+                    new_output = Path(output_dir) / f"{mp.stem}_output{ext}"
+                else:
+                    new_output = mp.with_suffix(ext)
+                self.output_path.set(str(new_output))
+        else:
+            cp = Path(current)
+            if cp.suffix.lower() != ext:
+                self.output_path.set(str(cp.with_suffix(ext)))
+
+    def _detect_template_extension(self) -> Optional[str]:
+        template = self.template_path.get()
+        if not template:
+            return None
+        try:
+            return f".{detect_format(template)}"
+        except ValueError:
+            return None
+
     def _auto_set_output_path(self, markdown_path: str) -> None:
-        """根據 Markdown 路徑自動設定輸出路徑"""
+        """根據 Markdown 路徑自動設定輸出路徑（沿用樣板的副檔名）"""
         if not self.output_path.get():
             md_path = Path(markdown_path)
             output_dir = self.config_manager.get("default_output_dir")
+            ext = self._detect_template_extension() or ".docx"
             if output_dir:
-                output = Path(output_dir) / f"{md_path.stem}_output.docx"
+                output = Path(output_dir) / f"{md_path.stem}_output{ext}"
             else:
-                output = md_path.with_suffix(".docx")
+                output = md_path.with_suffix(ext)
             self.output_path.set(str(output))
     
     def _load_markdown_preview(self, path: str) -> None:
@@ -377,34 +446,41 @@ class MainWindow(ctk.CTk):
         """執行轉換（在背景執行緒）"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.word_renderer import WordRenderer
-            
+            from md_word_renderer.cli.main import process_one
+
             # 解析
             self._update_progress(0.2, "解析 Markdown...")
             parser = MarkdownParser()
             data = parser.parse(self.markdown_path.get())
-            
+
             # 驗證（可選）
             if self.config_manager.get("validate_before_convert", True):
                 self._update_progress(0.4, "驗證資料...")
                 # TODO: 加入驗證邏輯
-            
-            # 渲染
-            self._update_progress(0.6, "渲染 Word 文件...")
-            renderer = WordRenderer()
-            renderer.render_to_file(data, self.template_path.get(), self.output_path.get())
-            
+
+            # 渲染（透過 factory 依樣板副檔名挑 renderer）
+            fmt = detect_format(self.template_path.get())
+            self._update_progress(0.6, f"渲染 {fmt.upper()} 文件...")
+            process_one(
+                input_path=self.markdown_path.get(),
+                template_path=self.template_path.get(),
+                output_path=self.output_path.get(),
+                format_hint="auto",
+                validate=bool(self.config_manager.get("validate_before_convert", True)),
+                verbose=False,
+            )
+
             # 完成
             self._update_progress(1.0, "完成!")
-            self._log(f"✅ 轉換完成: {self.output_path.get()}")
-            
+            self._log(f"✅ 轉換完成: {self.output_path.get()} (格式: {fmt})")
+
             # 開啟檔案（可選）
             if self.config_manager.get("open_after_convert", True):
                 import os
                 os.startfile(self.output_path.get())
-            
+
             self.after(0, lambda: messagebox.showinfo("成功", "轉換完成!"))
-            
+
         except ImportError as e:
             self._log(f"❌ 模組匯入錯誤: {str(e)}")
             self.after(0, lambda: messagebox.showerror("錯誤", f"模組匯入錯誤:\n{str(e)}"))
@@ -454,22 +530,29 @@ class MainWindow(ctk.CTk):
     def _show_help(self) -> None:
         """顯示說明"""
         help_text = """
-MD-Word Template Renderer v1.0
+MD-Word/Excel Template Renderer v2.2
 
 使用步驟：
 1. 選擇 Markdown 資料檔案
-2. 選擇 Word 模板檔案 (.docx)
-3. 指定輸出路徑
-4. 點擊「開始轉換」
+2. 選擇 Word 模板 (.docx) 或 Excel 樣板 (.xlsx)
+3. 輸出格式會自動依樣板副檔名偵測
+4. 指定輸出路徑
+5. 點擊「開始轉換」
 
 支援的 Markdown 格式：
-- 標題對應欄位名稱 (## 欄位名稱)
-- 內容為欄位值
+- 編號. 欄位名稱 | 值（行內）
+- 階層透過縮排表達
 
-模板語法：
+Word 模板語法（.docx）：
 - {{ 變數名 }} - 插入變數
 - {% if 條件 %} - 條件判斷
 - {% for item in list %} - 迴圈
+
+Excel 樣板語意（.xlsx）：
+- 「基本資訊」sheet 自動填入純量欄位
+- 每個清單欄位展開成獨立 sheet，每葉節點一列
+- 圖片自動嵌入並等比縮放
+- 樣板可放隱藏 LAYOUT sheet 覆寫預設
 
 詳細說明請參考 doc/template_syntax_reference.md
         """

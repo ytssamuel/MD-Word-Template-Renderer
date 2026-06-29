@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from .config_manager import ConfigManager
+from md_word_renderer.renderer.factory import build_renderer, detect_format
 
 
 class BatchWindow(ctk.CTkToplevel):
@@ -67,7 +68,7 @@ class BatchWindow(ctk.CTkToplevel):
         frame.grid_columnconfigure(1, weight=1)
         
         # 模板選擇
-        ctk.CTkLabel(frame, text="📋 Word 模板:").grid(
+        ctk.CTkLabel(frame, text="📋 Word/Excel 模板:").grid(
             row=0, column=0, sticky="w", padx=10, pady=5
         )
         ctk.CTkEntry(frame, textvariable=self.template_path).grid(
@@ -77,19 +78,24 @@ class BatchWindow(ctk.CTkToplevel):
             frame, text="瀏覽...", width=80,
             command=self._browse_template
         ).grid(row=0, column=2, padx=10, pady=5)
-        
-        # 輸出目錄
+
+        self.batch_format_label = ctk.CTkLabel(
+            frame, text="🔎 輸出格式: (尚未選擇樣板)", anchor="w"
+        )
+        self.batch_format_label.grid(row=1, column=0, columnspan=3, sticky="w", padx=10)
+        self.template_path.trace_add("write", lambda *_: self._refresh_template_label())
+        # 輸出目錄再放第二列下方，避免擠壓
         ctk.CTkLabel(frame, text="📁 輸出目錄:").grid(
-            row=1, column=0, sticky="w", padx=10, pady=5
+            row=2, column=0, sticky="w", padx=10, pady=5
         )
         ctk.CTkEntry(frame, textvariable=self.output_dir).grid(
-            row=1, column=1, sticky="ew", padx=5, pady=5
+            row=2, column=1, sticky="ew", padx=5, pady=5
         )
         ctk.CTkButton(
             frame, text="瀏覽...", width=80,
             command=self._browse_output_dir
-        ).grid(row=1, column=2, padx=10, pady=5)
-    
+        ).grid(row=2, column=2, padx=10, pady=5)
+
     def _create_file_list_section(self) -> None:
         """建立檔案清單區"""
         frame = ctk.CTkFrame(self)
@@ -197,11 +203,30 @@ class BatchWindow(ctk.CTkToplevel):
     def _browse_template(self) -> None:
         """瀏覽模板檔案"""
         path = filedialog.askopenfilename(
-            title="選擇 Word 模板",
-            filetypes=[("Word 文件", "*.docx"), ("所有檔案", "*.*")]
+            title="選擇 Word/Excel 模板",
+            filetypes=[
+                ("Word 文件", "*.docx"),
+                ("Excel 樣板", "*.xlsx"),
+                ("所有檔案", "*.*"),
+            ],
         )
         if path:
             self.template_path.set(path)
+
+    def _refresh_template_label(self) -> None:
+        """樣板路徑變更時更新格式標籤"""
+        template = self.template_path.get()
+        if not template:
+            if hasattr(self, "batch_format_label"):
+                self.batch_format_label.configure(text="🔎 輸出格式: (尚未選擇樣板)")
+            return
+        try:
+            fmt = detect_format(template)
+            if hasattr(self, "batch_format_label"):
+                self.batch_format_label.configure(text=f"🔎 輸出格式: {fmt}")
+        except ValueError:
+            if hasattr(self, "batch_format_label"):
+                self.batch_format_label.configure(text="🔎 輸出格式: (不支援的副檔名)")
     
     def _browse_output_dir(self) -> None:
         """瀏覽輸出目錄"""
@@ -262,57 +287,60 @@ class BatchWindow(ctk.CTkToplevel):
             messagebox.showwarning("警告", "請先新增要處理的檔案")
             return
         if not self.template_path.get():
-            messagebox.showwarning("警告", "請選擇 Word 模板")
+            messagebox.showwarning("警告", "請選擇 Word/Excel 模板")
             return
         if not self.output_dir.get():
             messagebox.showwarning("警告", "請選擇輸出目錄")
             return
-        
+
         # 禁用按鈕
         self.btn_start.configure(state="disabled")
-        
+
         # 背景執行
         thread = Thread(target=self._do_batch, daemon=True)
         thread.start()
-    
+
     def _do_batch(self) -> None:
         """執行批次處理"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.word_renderer import WordRenderer
-            
+            from md_word_renderer.renderer.factory import detect_format
+
             parser = MarkdownParser()
-            renderer = WordRenderer()
+            template = self.template_path.get()
+            fmt = detect_format(template)
+            output_ext = f".{fmt}"
             output_dir = Path(self.output_dir.get())
-            
+
             total = len(self.file_list)
             success = 0
             failed = 0
-            
+
             for i, (md_path, _) in enumerate(self.file_list):
                 try:
                     # 更新狀態
                     self._update_item_status(md_path, "處理中...")
                     self.after(0, lambda p=(i+1)/total: self.progress_bar.set(p))
-                    self.after(0, lambda s=f"處理 {i+1}/{total}": 
+                    self.after(0, lambda s=f"處理 {i+1}/{total}":
                                self.status_label.configure(text=s))
-                    
+
                     # 解析
                     data = parser.parse(md_path)
-                    
-                    # 渲染
-                    output_name = Path(md_path).stem + ".docx"
+
+                    # 透過 factory 依樣板挑 renderer
+                    renderer = build_renderer(template_path=template, format_hint=fmt)
+                    output_name = Path(md_path).stem + output_ext
                     output_path = output_dir / output_name
-                    renderer.render_to_file(data, self.template_path.get(), str(output_path))
-                    
+                    renderer.render_to_file(data, template, str(output_path))
+
                     # 成功
                     self._update_item_status(md_path, "✅ 完成")
                     success += 1
-                    
+
                 except Exception as e:
                     self._update_item_status(md_path, f"❌ {str(e)[:20]}")
                     failed += 1
-                    
+
                     if not self.config_manager.get("continue_on_error", True):
                         break
             

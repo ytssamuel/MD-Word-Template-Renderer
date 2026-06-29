@@ -9,7 +9,7 @@
 | 文件 | 說明 | 適用對象 |
 |------|------|----------|
 | [user_guide.md](user_guide.md) | **使用手冊** - 完整的使用指南，包含安裝、快速入門、CLI/GUI 使用說明 | 📘 終端使用者、初學者 |
-| [template_syntax_reference.md](template_syntax_reference.md) | **模板語法參考** - Word 模板中 Jinja2 語法的詳細說明 | 📗 模板設計者 |
+| [template_syntax_reference.md](template_syntax_reference.md) | **模板語法參考** - Word 模板中 Jinja2 語法 + Excel 樣板語意（v2.2 新增） | 📗 模板設計者 |
 
 ### 🛠️ 開發者文檔
 
@@ -19,6 +19,7 @@
 | [template_renderer_spec.md](template_renderer_spec.md) | **需求規劃** - 系統需求、資料格式分析、模板語法設計 | 🔍 系統架構師、產品經理 |
 | [implementation_plan.md](implementation_plan.md) | **實作計劃** - 開發階段、模組設計、時程規劃 | 📋 專案管理者、開發者 |
 | [gui_development_plan.md](gui_development_plan.md) | **GUI 開發計劃** - 圖形介面的設計規劃與實作細節 | 🎨 UI/UX 開發者 |
+| [implementation_plan_excel.md](implementation_plan_excel.md) | **Excel 渲染實作計劃 (v2.2)** - 新增 MD→Excel 渲染的決策、模組設計與執行順序 | 🔧 開發者 |
 
 ## 📖 快速導航
 
@@ -44,9 +45,10 @@
 | 文件 | 版本 | 最後更新 |
 |------|------|----------|
 | user_guide.md | v2.0 | 包含 CLI + GUI 完整功能 |
-| template_syntax_reference.md | v1.0 | Jinja2 語法完整參考 |
+| template_syntax_reference.md | v1.1 | 新增第 10 章 Excel 樣板語意 |
 | template_renderer_spec.md | v1.0 | 初始需求規劃 |
 | implementation_plan.md | v2.0 | 包含 GUI 開發計劃 |
+| implementation_plan_excel.md | v2.2 | Excel 渲染支援的決策與模組設計 |
 | gui_development_plan.md | v1.0 | GUI 功能規劃 |
 | DEV_START.md | v1.0 | Phase 1-4 開發清單 |
 
@@ -114,5 +116,5 @@ SpeedBOT/
 
 ---
 
-**文檔維護者**: MD-Word Template Renderer 開發團隊  
+**文檔維護者**: ytssamuel  
 **最後更新**: 2025年12月14日

@@ -31,6 +31,27 @@ batch:
   continue_on_error: true
   output_pattern: "{name}.docx"
 
+# Excel 渲染設定（v2.2 新增；v2.2.1 補 template_engine 段）
+excel:
+  default_template: templates/excel/sample_template.xlsx
+  list_sheet_naming: "{key}"
+  header_sheet:
+    enabled: true
+    name: "基本資訊"
+  extra_columns:
+    - source_field
+    - path
+    - depth
+  image:
+    max_width_px: 480
+    max_height_px: 360
+  auto_fit_columns: true
+  template_engine:
+    enabled: true
+    auto_flatten_lists: true
+    missing_variable: "silent"
+    error_format: "[ERROR: 變數 '{var}' 不存在]"
+
 # 日誌設定
 logging:
   level: INFO

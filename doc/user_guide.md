@@ -1,4 +1,7 @@
-# MD-Word Template Renderer 使用手冊
+# MD-Word/Excel Template Renderer 使用手冊
+
+> **作者：ytssamuel**  
+> 適用版本：v2.2.1（Excel 樣板為主 + Jinja2 模板引擎）
 
 ## 目錄
 
@@ -7,26 +10,35 @@
 3. [快速入門](#快速入門)
 4. [Markdown 資料格式](#markdown-資料格式)
 5. [Word 模板語法](#word-模板語法)
-6. [命令列工具](#命令列工具)
-7. [Python API](#python-api)
-8. [進階功能](#進階功能)
-9. [疑難排解](#疑難排解)
+6. [Excel 樣板語意（v2.2.1）](#excel-樣板語意v2221)
+7. [命令列工具](#命令列工具)
+8. [Python API](#python-api)
+9. [進階功能](#進階功能)
+10. [疑難排解](#疑難排解)
 
 ---
 
 ## 簡介
 
-MD-Word Template Renderer 是一個 Python 工具，用於將特定格式的 Markdown 資料渲染至 Word 模板。主要用途：
+MD-Word/Excel Template Renderer 是一個 Python 工具，能將特定格式的 Markdown 資料同時渲染至 **Word（.docx）** 與 **Excel（.xlsx）** 模板。主要用途：
 
-- 自動化文件生成
+- 自動化文件 / 報表生成
 - 批次處理多個資料檔案
-- 資料驅動的報告生成
+- 資料驅動的 Word 報告與 Excel 工作底稿
+- 一份 Markdown 同時餵給 Word 與 Excel 兩條 pipeline
 
 ### 核心概念
 
-1. **Markdown 資料來源** - 特殊格式的 .md 檔案，包含結構化資料
-2. **Word 模板** - 使用 Jinja2 語法的 .docx 模板
-3. **渲染輸出** - 合併資料與模板後的 Word 文件
+1. **Markdown 資料來源** - 特殊格式的 `.md` 檔案，包含結構化資料
+2. **Word / Excel 模板** - 使用 Jinja2 語法的 `.docx` 或 `.xlsx` 模板
+3. **渲染輸出** - 合併資料與模板後的文件，CLI/GUI 會依樣板副檔名自動選擇對應 renderer
+
+### 支援格式
+
+| 格式 | 版本 | 模板語意 | 引擎 |
+|---|---|---|---|
+| Word (.docx) | v1.0+ | Jinja2 + docxtpl | `python-docx` + `docxtpl` |
+| Excel (.xlsx) | v2.2+ | v2.2.1 起：Jinja2（`{{var}}` / `{% if %}` / `{% for %}`） | `openpyxl` |
 
 ---
 
@@ -49,8 +61,11 @@ venv\Scripts\activate
 # macOS/Linux:
 source venv/bin/activate
 
-# 3. 安裝依賴
+# 3. 安裝核心依賴
 pip install -r requirements.txt
+
+# 4. 安裝 GUI 依賴（選用）
+pip install -r requirements-gui.txt
 ```
 
 ### 驗證安裝
@@ -59,7 +74,7 @@ pip install -r requirements.txt
 python md2word.py info
 ```
 
-應該會看到版本資訊和功能說明。
+應該會看到版本資訊（v2.2.1）、支援格式（Word + Excel）與功能說明。
 
 ---
 
@@ -75,27 +90,45 @@ python md2word.py info
 1. 系統名稱 | 帳款管理系統
 2. 變更單號 | CRQ000001
 3. 日期 | 2025/01/15
+16. 異動內容-測試案例 |
+    1. 登入功能測試
+       1. 驗證帳號密碼
+       2. 忘記密碼流程
 ```
 
-### 步驟 2：準備 Word 模板
+### 步驟 2：準備模板
 
-建立 `template.docx`，內容包含：
+**Word 模板** `template.docx` 內容包含：
 
 ```
 系統名稱：{{系統名稱}}
 變更單號：{{變更單號}}
-日期：{{日期}}
+```
+
+**Excel 樣板** `template.xlsx`（v2.2.1 起樣板為主）：
+
+```
+A1: 欄位    B1: 值
+A2: 系統名稱 B2: {{系統名稱}}
+A3: 變更單號 B3: {{變更單號}}
 ```
 
 ### 步驟 3：執行轉換
 
 ```bash
+# Word
 python md2word.py render data.md template.docx output.docx
+
+# Excel（自動從副檔名偵測）
+python md2word.py render data.md template.xlsx output.xlsx
+
+# 明確指定格式
+python md2word.py render data.md template.xlsx output.xlsx --format xlsx
 ```
 
 ### 步驟 4：檢視結果
 
-打開 `output.docx`，應該會看到變數已被實際值取代。
+打開 `output.docx` 或 `output.xlsx`，應該會看到 `{{變數}}` 已被實際值取代。
 
 ---
 
@@ -116,7 +149,7 @@ python md2word.py render data.md template.docx output.docx
 使用縮排建立階層關係（4 空格或 Tab）：
 
 ```markdown
-16. 測試案例 | 
+16. 測試案例 |
     1. 功能測試 | 測試登入功能
         1. 子測試 A | 驗證帳號
         2. 子測試 B | 驗證密碼
@@ -130,8 +163,8 @@ python md2word.py render data.md template.docx output.docx
 值為空時，只需保留分隔符號：
 
 ```markdown
-8. 中介軟體 | 
-9. 網路設定 | 
+8. 中介軟體 |
+9. 網路設定 |
 ```
 
 ### 特殊字元轉義
@@ -143,7 +176,7 @@ python md2word.py render data.md template.docx output.docx
 11. 多行內容 | 第一行\n第二行
 ```
 
-### 支援的轉義：
+### 支援的轉義
 
 | 轉義序列 | 說明 |
 |---------|------|
@@ -164,7 +197,7 @@ python md2word.py render data.md template.docx output.docx
 **範例：**
 
 ```markdown
-16. 異動內容-測試案例 | 
+16. 異動內容-測試案例 |
     1. 調整供應商登入之密碼功能
        1. 新增供應商使用者
           1. ![2025-11-01_104655](17. 異動內容-測試案例/1. 調整/image.png)
@@ -174,31 +207,28 @@ python md2word.py render data.md template.docx output.docx
 - 圖片路徑可以是相對路徑（相對於 Markdown 檔案所在目錄）
 - 替代文字會被保存為圖片說明
 - 支援的圖片格式：PNG、JPG、JPEG、GIF、BMP
-- 圖片會自動轉換為 Word 中的 InlineImage
+- Word 模板：`{{item.image}}` 渲染為 InlineImage
+- Excel 樣板：圖片自動嵌入並等比縮放（`excel.image.max_width_px` / `max_height_px` 控制上限）
 
-**解析結果範例：**
+**在 Word 模板中使用圖片：**
 
-```json
-{
-  "type": "image",
-  "number": "1",
-  "value": "2025-11-01_104655",
-  "image_path": "C:\\absolute\\path\\to\\image.png",
-  "image_alt": "2025-11-01_104655",
-  "image": "<InlineImage 物件，渲染時自動產生>",
-  "children": []
-}
+```jinja2
+{% for item in data["異動內容-測試案例"] %}
+  {% for child in item.children %}
+    {% if child.type == "image" %}
+      {{child.image}}    {# 輸出圖片本身 #}
+    {% else %}
+      {{child.value}}    {# 輸出純文字 #}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
 ```
-
-**在模板中使用圖片：**
-- `{{item.value}}` - 輸出替代文字（純文字）
-- `{{item.image}}` - 輸出圖片本身（InlineImage 物件）
 
 ---
 
 ## Word 模板語法
 
-模板使用 Jinja2 語法，支援變數替換、條件、迴圈等功能。
+Word 模板使用 docxtpl + Jinja2，支援變數替換、條件、迴圈。
 
 ### 簡單變數
 
@@ -260,6 +290,120 @@ python md2word.py render data.md template.docx output.docx
 
 ---
 
+## Excel 樣板語意（v2.2.1）
+
+v2.2.1 起，Excel 樣板**全面走 Jinja2**，與 Word renderer 對齊。
+
+### 基本變數替換（Phase 1）
+
+樣板內 `{{變數}}` 自動被替換；特殊字元鍵用 `data["..."]` 形式：
+
+```
+A1: 欄位        B1: 值
+A2: 系統名稱    B2: {{系統名稱}}
+A3: 變更單號    B3: {{變更單號}}
+A4: 需求依據    B4: {{data["需求依據(INC/PBI)"]}}
+A5: 通知方式    B5: {{data["通知/公告方式"]}}
+```
+
+```jinja2
+A6: 第一個欄位的 key   B6: {{data["#1"].key}}
+```
+
+> **不再自動 append**：v2.2.0 的「自動把純量欄位往 header sheet append」行為在 v2.2.1 拿掉。樣板上寫多少 `{{...}}`，產出就多少列；沒寫就不會自動加。`auto_flatten_lists: true`（預設）讓 v2.2.0 既有 list sheet auto-flatten 仍可用。
+
+### 條件渲染（Phase 2）
+
+```jinja2
+{% if 資料庫 %}有 {{ 資料庫 }}{% else %}無{% endif %}
+```
+
+Jinja2 原生語意：條件為真時渲染對應分支；否則清空（silent 模式）。
+
+### 列展開（Phase 3 — 單層 `{% for %}`）
+
+在樣板的「整張 sheet」使用 `{% for %}` 與 `{% endfor %}` 標記，標記必須在**自己的 row**，body 在中間。
+
+```
+A1: 編號   B1: 內容           C1: 型別    D1: 子項數
+A2: {% for case in data['#16'].children %}
+A3: {{case.number}}   B3: {{case.value}}   C3: {{case.type or 'text'}}   D3: {{case.children|length}}
+A4: {% endfor %}
+```
+
+渲染後行為：
+
+- 標記 row（A2、A4）會被刪除
+- body row（A3）會被複製 N 份（N = 清單長度，例如 5 cases）並 append 到 sheet 底部
+- 每份綁定 `case` 為當前 item，可用 `{{case.number}}`、`{{case.value}}`、`{{case.children|length}}` 等
+- `loop.index` / `loop.first` / `loop.last` 也可用
+
+**限制（v2.2.1）**：
+- 不支援巢狀 `{% for %}`（內層為 v2.2.2+ 規劃）
+- 內層 for marker 與外層 body 必須在不同 row
+
+### 缺變數行為
+
+| 模式 | 行為 |
+|---|---|
+| `silent`（預設） | `{{missing}}` → 空字串 |
+| `keep` | 保留 `{{missing}}` 字面字串（除錯用） |
+| `error_format` | 套用 `error_format` 模板，例：`[ERROR: missing]` |
+
+設定方式（`config.yaml`）：
+
+```yaml
+excel:
+  template_engine:
+    enabled: true
+    auto_flatten_lists: true   # 向後相容 v2.2.0
+    missing_variable: silent
+    error_format: "[ERROR: 變數 '{var}' 不存在]"
+```
+
+### LAYOUT 隱藏工作表（覆寫 layout 設定）
+
+樣板內可放一張隱藏的 `LAYOUT` sheet，欄位 `key | value`，可覆寫 layout 設定：
+
+| key | 範例值 | 對應 LayoutConfig |
+|---|---|---|
+| `auto_fit_columns` | `True` | `auto_fit_columns` |
+| `image_max_width_px` | `480` | `image.max_width_px` |
+| `template_engine_enabled` | `True` | `template_engine.enabled` |
+| `auto_flatten_lists` | `False` | `template_engine.auto_flatten_lists` |
+| `missing_variable` | `silent` | `template_engine.missing_variable` |
+
+LAYOUT sheet 在 renderer 完成後會自動從活頁簿移除，**不會出現在最終 .xlsx 內**。
+
+### 完整範例：`templates/excel/with_lists_template.xlsx`
+
+```
+=== sheet: 基本資訊 ===
+A1: 欄位       B1: 值
+A2: 系統名稱   B2: {{系統名稱}}
+A3: 變更單號   B3: {{變更單號}}
+
+=== sheet: 異動內容-測試案例 ===
+A1: 編號       B1: 內容          C1: 型別     D1: 子項數
+A2: {% for case in data['#16'].children %}
+A3: {{case.number}}  B3: {{case.value}}  C3: {{case.type or 'text'}}  D3: {{case.children|length}}
+A4: {% endfor %}
+
+=== sheet: 異動內容-子項 ===
+A1: 父項編號   B1: 父項內容      C1: 子項數    D1: 第一個子項編號  E1: 第一個子項值
+A2: {% for case in data['#16'].children %}
+A3: {{case.number}}  B3: {{case.value}}  C3: {{case.children|length}}
+    D3: {% if case.children %}{{case.children[0].number}}{% endif %}
+    E3: {% if case.children %}{{case.children[0].value}}{% endif %}
+A4: {% endfor %}
+```
+
+### 圖片嵌入
+
+Markdown 內 `![alt](path)` 在 list 葉節點上會以 `type: image` 標記；Excel renderer 自動等比縮放後嵌入 B 欄的儲存格（`excel.image.max_width_px` / `max_height_px` 控制上限）。圖片找不到時會在「型別」欄寫入 `image-missing: ...`，不會讓整批失敗。
+
+---
+
 ## 命令列工具
 
 ### 基本指令
@@ -268,17 +412,27 @@ python md2word.py render data.md template.docx output.docx
 python md2word.py <command> [options]
 ```
 
+可用子命令：`render` / `batch` / `batch-templates` / `validate` / `info`
+
 ### render - 單一檔案轉換
 
 ```bash
-python md2word.py render <input.md> <template.docx> <output.docx>
+python md2word.py render <input.md> <template> <output>
 
 選項：
-  -v, --verbose       顯示詳細處理資訊
-  --no-validate       跳過資料驗證步驟
+  -v, --verbose              顯示詳細處理資訊
+  --no-validate              跳過資料驗證步驟
+  --format {auto,docx,xlsx}  輸出格式；預設 auto 從樣板副檔名推斷
 
 範例：
+  # Word（自動推斷）
   python md2word.py render data.md template.docx output.docx -v
+
+  # Excel（自動推斷）
+  python md2word.py render data.md templates/excel/sample_template.xlsx output.xlsx
+
+  # 明確指定格式（覆寫副檔名推斷）
+  python md2word.py render data.md tpl.xlsx out.xlsx --format xlsx
 ```
 
 ### batch - 批次轉換（多 MD + 單模板）
@@ -286,45 +440,53 @@ python md2word.py render <input.md> <template.docx> <output.docx>
 將多個 Markdown 資料檔案使用同一個模板轉換。
 
 ```bash
-python md2word.py batch <input_dir> <template.docx> <output_dir>
+python md2word.py batch <input_dir> <template> <output_dir>
 
 選項：
-  -p, --pattern       檔案搜尋模式 (預設: *.md)
-  -v, --verbose       顯示詳細資訊
-  --continue-on-error 遇到錯誤時繼續處理其他檔案
+  -p, --pattern           檔案搜尋模式 (預設: *.md)
+  -v, --verbose           顯示詳細資訊
+  --no-validate           跳過資料驗證
+  --continue-on-error     遇到錯誤時繼續處理其他檔案
+  --format {auto,docx,xlsx}  輸出格式；預設 auto 從樣板副檔名推斷
 
 範例：
   python md2word.py batch ./inputs/ template.docx ./outputs/ -v
   python md2word.py batch ./data/ template.docx ./out/ -p "OH_*.md"
+  python md2word.py batch ./data/ template.xlsx ./out/
 ```
 
 ### batch-templates - 多模板批次轉換（單 MD + 多模板）
 
-將一份 Markdown 資料使用多個模板轉換，產生多個不同的 Word 文件。
+將一份 Markdown 資料使用多個模板轉換，產生多個文件。**同資料夾內可同時混搭 `.docx` / `.xlsx`**，各自決定輸出格式。
 
 ```bash
 python md2word.py batch-templates <input.md> <template_dir> <output_dir>
 
 選項：
-  -p, --pattern       模板搜尋模式 (預設: *.docx)
-  -v, --verbose       顯示詳細資訊
-  --continue-on-error 遇到錯誤時繼續處理其他模板
-  --prefix            輸出檔案名稱前綴
-  --suffix            輸出檔案名稱後綴（在副檔名之前）
+  -p, --pattern           模板搜尋模式 (預設 *.docx；v2.2 起 *.docx 與 *.xlsx 皆可)
+  -v, --verbose           顯示詳細資訊
+  --no-validate           跳過資料驗證
+  --continue-on-error     遇到錯誤時繼續處理其他模板
+  --prefix                輸出檔案名稱前綴
+  --suffix                輸出檔案名稱後綴（在副檔名之前）
+  --format {auto,docx,xlsx}  覆寫所有模板的格式
 
 範例：
   # 基本用法
   python md2word.py batch-templates data.md ./templates/ ./outputs/
-  
+
+  # 混合 .docx 與 .xlsx 樣板（依樣板副檔名自動決定輸出）
+  python md2word.py batch-templates data.md ./templates/ ./outputs/ --no-validate
+
   # 加入前綴和後綴
   python md2word.py batch-templates data.md ./templates/ ./outputs/ --prefix "2025_" --suffix "_final"
-  
+
   # 詳細輸出
   python md2word.py batch-templates data.md ./templates/ ./outputs/ -v
 ```
 
 **使用情境：**
-- 同一份資料需要產生不同格式的報告（例如：簡報摘要、詳細報告、客戶版本）
+- 同一份資料需要產生不同格式的 Word 報告 + Excel 工作底稿
 - 不同部門需要同一份資料的不同視角文件
 
 ### validate - 驗證資料
@@ -350,7 +512,16 @@ python md2word.py info
 
 ## Python API
 
-### 基本使用
+### 統一入口：`build_renderer`
+
+```python
+from md_word_renderer.renderer.factory import build_renderer
+
+renderer = build_renderer(template_path='template.docx')   # 自動選 WordRenderer
+renderer = build_renderer(template_path='sample.xlsx')     # 自動選 ExcelRenderer
+```
+
+### 基本使用（Word）
 
 ```python
 from md_word_renderer import MarkdownParser, WordRenderer
@@ -366,10 +537,23 @@ renderer.render(data)
 renderer.save('output.docx')
 ```
 
+### 基本使用（Excel）
+
+```python
+from md_word_renderer import MarkdownParser
+from md_word_renderer.renderer.factory import build_renderer
+
+parser = MarkdownParser()
+data = parser.parse('data.md')
+
+renderer = build_renderer(template_path='templates/excel/sample_template.xlsx')
+renderer.render_to_file(data, 'templates/excel/sample_template.xlsx', 'output.xlsx')
+```
+
 ### 一行完成
 
 ```python
-renderer = WordRenderer()
+renderer = build_renderer(template_path='template.docx')
 renderer.render_to_file(data, 'template.docx', 'output.docx')
 ```
 
@@ -408,8 +592,7 @@ first_field = data['#1']  # {'key': '系統名稱', 'value': '...'}
 解析含有圖片的資料後，圖片項目會有特殊的 `type` 屬性：
 
 ```python
-from md_word_renderer import MarkdownParser, WordRenderer
-from docx.shared import Cm
+from md_word_renderer import MarkdownParser
 
 parser = MarkdownParser()
 data = parser.parse('data_with_images.md')
@@ -423,12 +606,11 @@ def find_images(items):
         if item.get('children'):
             find_images(item['children'])
 
-# 尋找測試案例中的圖片
 test_cases = data.get('異動內容-測試案例', [])
 find_images(test_cases)
 ```
 
-### 渲染含圖片的資料
+### 渲染含圖片的 Word 資料
 
 ```python
 from md_word_renderer import WordRenderer
@@ -437,7 +619,6 @@ from docx.shared import Cm
 # 建立渲染器，設定圖片尺寸
 renderer = WordRenderer(image_width=Cm(15), image_height=None)
 
-# 渲染資料（圖片會自動處理）
 renderer.load_template('template.docx')
 renderer.render(data)
 
@@ -477,14 +658,14 @@ renderer.save('output.docx')
 python md2word.py validate data.md -s custom_schema.json
 ```
 
-### 批次處理腳本
+### 批次處理腳本（Word + Excel 混搭）
 
 ```python
 from pathlib import Path
-from md_word_renderer import MarkdownParser, WordRenderer
+from md_word_renderer import MarkdownParser
+from md_word_renderer.renderer.factory import build_renderer
 
 parser = MarkdownParser()
-renderer = WordRenderer()
 
 input_dir = Path('inputs')
 output_dir = Path('outputs')
@@ -492,9 +673,32 @@ output_dir.mkdir(exist_ok=True)
 
 for md_file in input_dir.glob('*.md'):
     data = parser.parse(str(md_file))
-    output_file = output_dir / f"{md_file.stem}.docx"
-    renderer.render_to_file(data, 'template.docx', str(output_file))
-    print(f"已處理: {md_file.name} -> {output_file.name}")
+    # 用同一份 Markdown 同時產 Word 與 Excel
+    word = build_renderer(template_path='template.docx')
+    word.render_to_file(data, 'template.docx', str(output_dir / f"{md_file.stem}.docx"))
+
+    excel = build_renderer(template_path='template.xlsx')
+    excel.render_to_file(data, 'template.xlsx', str(output_dir / f"{md_file.stem}.xlsx"))
+
+    print(f"已處理: {md_file.name}")
+```
+
+### Excel 自訂 LayoutConfig
+
+```python
+from md_word_renderer.renderer.excel_renderer import ExcelRenderer
+from md_word_renderer.renderer.excel_layout import LayoutConfig, TemplateEngineConfig
+
+layout = LayoutConfig(
+    template_engine=TemplateEngineConfig(
+        enabled=True,
+        auto_flatten_lists=False,   # 純樣板驅動
+        missing_variable="silent",
+        error_format="[ERROR: 變數 '{var}' 不存在]",
+    ),
+    image_max_width_px=300,   # 限制圖片寬度
+)
+renderer = ExcelRenderer(layout=layout)
 ```
 
 ---
@@ -513,6 +717,7 @@ for md_file in input_dir.glob('*.md'):
 - 檢查 Markdown 檔案是否包含該欄位
 - 確認欄位名稱完全一致（包含空格）
 - 對於特殊字元欄位，使用 `data["欄位名稱"]` 語法
+- Excel 可改 `excel.template_engine.missing_variable: "error_format"` 讓錯誤訊息可見
 
 #### 2. 無法解析 Markdown
 
@@ -535,6 +740,33 @@ for md_file in input_dir.glob('*.md'):
 - 統一使用空格或 Tab
 - 確保子項目的縮排大於父項目
 
+#### 4. Excel 樣板 `{{...}}` 沒被替換
+
+**原因**：v2.2.0 行為沒有處理樣板文字；升級至 v2.2.1 後自動套模板引擎。
+
+**解決方案**：
+- 確認使用的是 v2.2.1 版（`python md2word.py info` 看版本）
+- 若要關閉模板引擎：`excel.template_engine.enabled: false`（少用）
+- 缺變數行為改 `excel.template_engine.missing_variable: "error_format"` 查看問題
+
+#### 5. Excel `{% for %}` 沒展開
+
+**原因**：`{% for %}` 標記被放在與 body 同一 row。
+
+**解決方案**：
+- `{% for %}` 與 `{% endfor %}` 必須各自在獨立 row
+- body rows 在中間
+- 巢狀 for 為 v2.2.2+ 規劃，v2.2.1 不支援
+
+#### 6. openpyxl 找不到
+
+**錯誤訊息**：`openpyxl does not support .xlsx file format...`
+
+**解決方案**：
+```bash
+pip install "openpyxl>=3.1,<4"
+```
+
 ### 檢視解析結果
 
 ```python
@@ -552,4 +784,4 @@ print(json.dumps(data, ensure_ascii=False, indent=2))
 
 ## 聯絡與支援
 
-如有問題，請提交 Issue 或聯絡開發團隊。
+如有問題，請提交 Issue 或聯絡作者 **ytssamuel**。

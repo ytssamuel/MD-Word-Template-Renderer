@@ -5,6 +5,9 @@
 python-docx>=0.8.11
 docxtpl>=0.16.7
 
+# Excel 文件處理
+openpyxl>=3.1,<4
+
 # 模板引擎
 Jinja2>=3.1.2
 

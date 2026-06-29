@@ -60,7 +60,7 @@ class ConfigLoader:
     def _default_config(self) -> Dict[str, Any]:
         """
         預設設定
-        
+
         Returns:
             dict: 預設設定字典
         """
@@ -86,6 +86,26 @@ class ConfigLoader:
                 'show_progress': True,
                 'continue_on_error': True,
                 'output_pattern': '{name}.docx'
+            },
+            'excel': {
+                'default_template': 'templates/excel/sample_template.xlsx',
+                'list_sheet_naming': '{key}',
+                'header_sheet': {
+                    'enabled': True,
+                    'name': '基本資訊',
+                },
+                'extra_columns': ['source_field', 'path', 'depth'],
+                'image': {
+                    'max_width_px': 480,
+                    'max_height_px': 360,
+                },
+                'auto_fit_columns': True,
+                'template_engine': {
+                    'enabled': True,
+                    'auto_flatten_lists': True,
+                    'missing_variable': 'silent',
+                    'error_format': "[ERROR: 變數 '{var}' 不存在]",
+                },
             },
             'logging': {
                 'level': 'INFO',

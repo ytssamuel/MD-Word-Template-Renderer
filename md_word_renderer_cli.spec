@@ -2,7 +2,7 @@
 """
 PyInstaller 打包規格檔 - CLI 版本
 
-用於將 MD-Word Template Renderer CLI 打包為命令列執行檔
+用於將 MD-Word/Excel Template Renderer CLI 打包為命令列執行檔
 """
 
 import sys
@@ -33,12 +33,26 @@ hiddenimports = [
     'yaml',
     'jsonschema',
     'click',
+    # Excel 渲染支援 (v2.2)
+    'openpyxl',
+    'openpyxl.cell',
+    'openpyxl.drawing',
+    'openpyxl.drawing.image',
+    'openpyxl.styles',
+    'openpyxl.utils',
+    'openpyxl.workbook',
+    'openpyxl.worksheet',
+    'et_xmlfile',
     'md_word_renderer',
     'md_word_renderer.parser',
     'md_word_renderer.parser.markdown_parser',
     'md_word_renderer.renderer',
     'md_word_renderer.renderer.word_renderer',
     'md_word_renderer.renderer.error_handler',
+    'md_word_renderer.renderer.excel_renderer',
+    'md_word_renderer.renderer.excel_image_handler',
+    'md_word_renderer.renderer.excel_layout',
+    'md_word_renderer.renderer.factory',
     'md_word_renderer.validator',
     'md_word_renderer.validator.schema_validator',
     'md_word_renderer.cli',
@@ -60,7 +74,7 @@ excludes = [
     'pip',
     'customtkinter',  # CLI 版本不需要 GUI 庫
     'tkinter',
-    'PIL',
+    # 注意：pillow 由 openpyxl 圖片處理需要保留
     'darkdetect',
 ]
 

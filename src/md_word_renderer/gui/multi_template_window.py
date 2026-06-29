@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from .config_manager import ConfigManager
+from md_word_renderer.renderer.factory import build_renderer, detect_format
 
 
 class MultiTemplateWindow(ctk.CTkToplevel):
@@ -56,7 +57,7 @@ class MultiTemplateWindow(ctk.CTkToplevel):
         # 說明標籤
         info_label = ctk.CTkLabel(
             self,
-            text="📋 多模板批次處理：使用一份 Markdown 資料搭配多個 Word 模板，產生多個不同的 Word 文件",
+            text="📋 多模板批次處理：使用一份 Markdown 資料搭配多個 Word / Excel 模板，產生多個對應格式的文件",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
@@ -112,8 +113,8 @@ class MultiTemplateWindow(ctk.CTkToplevel):
         ctk.CTkEntry(option_frame, textvariable=self.suffix_var, width=100).pack(side="left", padx=5)
         
         ctk.CTkLabel(
-            option_frame, 
-            text="(輸出: 前綴+模板名+後綴.docx)",
+            option_frame,
+            text="(輸出: 前綴+模板名+後綴.<樣板副檔名>)",
             text_color="gray"
         ).pack(side="left", padx=10)
     
@@ -129,8 +130,8 @@ class MultiTemplateWindow(ctk.CTkToplevel):
         title_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         
         ctk.CTkLabel(
-            title_frame, 
-            text="📋 Word 模板清單",
+            title_frame,
+            text="📋 Word/Excel 模板清單",
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(side="left", padx=5)
         
@@ -255,8 +256,12 @@ class MultiTemplateWindow(ctk.CTkToplevel):
     def _add_templates(self) -> None:
         """新增模板檔案"""
         paths = filedialog.askopenfilenames(
-            title="選擇 Word 模板",
-            filetypes=[("Word 文件", "*.docx"), ("所有檔案", "*.*")]
+            title="選擇 Word/Excel 模板",
+            filetypes=[
+                ("Word 文件", "*.docx"),
+                ("Excel 樣板", "*.xlsx"),
+                ("所有檔案", "*.*"),
+            ],
         )
         for path in paths:
             if path not in [item[0] for item in self.template_list]:
@@ -264,18 +269,19 @@ class MultiTemplateWindow(ctk.CTkToplevel):
                 self.template_list.append((path, "待處理"))
                 self.tree.insert("", "end", values=(name, path, "待處理"))
         self._update_count()
-    
+
     def _add_folder(self) -> None:
-        """新增資料夾中的所有模板"""
+        """新增資料夾中的所有模板（同時收集 .docx 與 .xlsx）"""
         folder = filedialog.askdirectory(title="選擇模板資料夾")
         if folder:
             folder_path = Path(folder)
-            for path in folder_path.glob("*.docx"):
-                path_str = str(path)
-                if path_str not in [item[0] for item in self.template_list]:
-                    name = path.stem
-                    self.template_list.append((path_str, "待處理"))
-                    self.tree.insert("", "end", values=(name, path_str, "待處理"))
+            for ext in ("*.docx", "*.xlsx"):
+                for path in folder_path.glob(ext):
+                    path_str = str(path)
+                    if path_str not in [item[0] for item in self.template_list]:
+                        name = path.stem
+                        self.template_list.append((path_str, "待處理"))
+                        self.tree.insert("", "end", values=(name, path_str, "待處理"))
             self._update_count()
     
     def _remove_selected(self) -> None:
@@ -329,50 +335,52 @@ class MultiTemplateWindow(ctk.CTkToplevel):
         """執行批次處理"""
         try:
             from md_word_renderer.parser.markdown_parser import MarkdownParser
-            from md_word_renderer.renderer.word_renderer import WordRenderer
-            
+
             # 解析 Markdown（只需一次）
             self.after(0, lambda: self.status_label.configure(text="解析 Markdown..."))
             parser = MarkdownParser()
             data = parser.parse(self.markdown_path.get())
-            
+
             output_dir = Path(self.output_dir.get())
             output_dir.mkdir(parents=True, exist_ok=True)
-            
+
             prefix = self.prefix_var.get()
             suffix = self.suffix_var.get()
-            
+
             total = len(self.template_list)
             success = 0
             failed = 0
-            
-            renderer = WordRenderer()
-            
+
             for i, (template_path, _) in enumerate(self.template_list):
                 try:
+                    # 從樣板副檔名推格式
+                    fmt = detect_format(template_path)
+                    output_ext = f".{fmt}"
+
                     # 更新狀態
                     self._update_item_status(template_path, "處理中...")
                     self.after(0, lambda p=(i+1)/total: self.progress_bar.set(p))
-                    self.after(0, lambda s=f"處理 {i+1}/{total}: {Path(template_path).stem}": 
+                    self.after(0, lambda s=f"處理 {i+1}/{total}: {Path(template_path).stem}":
                                self.status_label.configure(text=s))
-                    
+
                     # 組合輸出檔名
                     template_name = Path(template_path).stem
-                    output_name = f"{prefix}{template_name}{suffix}.docx"
+                    output_name = f"{prefix}{template_name}{suffix}{output_ext}"
                     output_path = output_dir / output_name
-                    
-                    # 渲染
+
+                    # 透過 factory 挑 renderer
+                    renderer = build_renderer(template_path=template_path, format_hint=fmt)
                     renderer.render_to_file(data, template_path, str(output_path))
-                    
+
                     # 成功
                     self._update_item_status(template_path, "✅ 完成")
                     success += 1
-                    
+
                 except Exception as e:
                     error_msg = str(e)[:25] + "..." if len(str(e)) > 25 else str(e)
                     self._update_item_status(template_path, f"❌ {error_msg}")
                     failed += 1
-                    
+
                     if not self.config_manager.get("continue_on_error", True):
                         break
             

@@ -2,7 +2,7 @@
 """
 PyInstaller 打包規格檔
 
-用於將 MD-Word Template Renderer GUI 打包為獨立執行檔
+用於將 MD-Word/Excel Template Renderer GUI 打包為獨立執行檔
 """
 
 import sys
@@ -38,11 +38,26 @@ hiddenimports = [
     'PIL._tkinter_finder',
     'yaml',
     'jsonschema',
+    # Excel 渲染支援 (v2.2)
+    'openpyxl',
+    'openpyxl.cell',
+    'openpyxl.drawing',
+    'openpyxl.drawing.image',
+    'openpyxl.styles',
+    'openpyxl.utils',
+    'openpyxl.workbook',
+    'openpyxl.worksheet',
+    'et_xmlfile',
     'md_word_renderer',
     'md_word_renderer.parser',
     'md_word_renderer.parser.markdown_parser',
     'md_word_renderer.renderer',
     'md_word_renderer.renderer.word_renderer',
+    'md_word_renderer.renderer.error_handler',
+    'md_word_renderer.renderer.excel_renderer',
+    'md_word_renderer.renderer.excel_image_handler',
+    'md_word_renderer.renderer.excel_layout',
+    'md_word_renderer.renderer.factory',
     'md_word_renderer.validator',
     'md_word_renderer.validator.schema_validator',
     'md_word_renderer.gui',

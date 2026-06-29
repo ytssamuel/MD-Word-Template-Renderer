@@ -28,6 +28,9 @@ output/
 *.docx
 !templates/*.docx
 !examples/*.docx
+*.xlsx
+!templates/excel/*.xlsx
+!examples/*.xlsx
 
 # 日誌
 logs/

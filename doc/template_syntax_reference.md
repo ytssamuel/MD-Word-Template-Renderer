@@ -1,4 +1,4 @@
-# Word 模板指令大全
+﻿# Word 模板指令大全
 
 本文件詳細說明 MD-Word Template Renderer 所支援的所有模板語法。模板基於 **Jinja2** 語法，並透過 **docxtpl** 在 Word 文件中實現。
 
@@ -865,3 +865,152 @@ renderer = WordRenderer(
 
 *文件版本：1.0*  
 *最後更新：2025-12*
+
+
+
+
+---
+
+
+## 10. Excel 樣板語意（v2.2.1 重寫為 Jinja2 模板引擎）
+
+v2.2.1 起，Excel 樣板**全面走 Jinja2**，與 Word renderer 對齊：
+
+| 場景 | 語意 |
+|---|---|
+| cell 含 `{{var}}` | 替換為頂層純量 `var` 的值 |
+| cell 含 `{{data["key(INC/PBI)"]}}` | 替換為特殊字元鍵的值（括號、斜線） |
+| cell 含 `{{data["#1"].key}}` | 透過編號索引取第一個欄位的 key |
+| cell 含 `{% if cond %}A{% else %}B{% endif %}` | 條件渲染（Jinja2 原生） |
+| cell 內含 `{% for x in items %}` | **不會**自動展開（單一 cell 無法表達多 row） |
+| 樣板有同名 sheet + 含 `{% for %}` 標記 | 整張 sheet 走 for 展開 |
+| 缺變數 | silent → 空字串（可在 config 改成 keep / error_format） |
+
+樣板為主：不再自動 append 純量欄位；只有 `{{var}}` 出現的 cell 才會被替換。
+
+### 10.1 基本變數替換（Phase 1）
+
+```
+系統名稱：{{系統名稱}}
+變更單號：{{變更單號}}
+```
+
+範例：sample_template.xlsx
+
+```
+A1: 欄位          B1: 值
+A2: 系統名稱      B2: {{系統名稱}}
+A3: 變更單號      B3: {{變更單號}}
+A4: 需求依據      B4: {{data["需求依據(INC/PBI)"]}}
+A5: 通知方式      B5: {{data["通知/公告方式"]}}
+```
+
+### 10.2 條件渲染（Phase 2）
+
+```
+{% if 資料庫 %}有 {{ 資料庫 }}{% else %}無{% endif %}
+```
+
+Jinja2 原生語意：條件為真時渲染對應分支；否則清空（silent 模式）。
+
+### 10.3 列展開（Phase 3 — 單層 for）
+
+在樣板的「整張 sheet」上使用 `{% for %}` 與 `{% endfor %}` 標記，標記必須在**自己的 row**，body 在中間。
+
+```
+A1: 編號   B1: 內容           C1: 型別    D1: 子項數
+A2: {% for case in data['#16'].children %}
+A3: {{case.number}}   B3: {{case.value}}   C3: {{case.type or 'text'}}   D3: {{case.children|length}}
+A4: {% endfor %}
+```
+
+渲染後：
+- 標記 row 2 與 endfor row 4 會被刪除
+- body row 3 會被複製 N 份（N = 5 cases）並 append 到 sheet 底部
+- 每份綁定 `case` 為當前 item，可用 `{{case.number}}`、`{{case.value}}` 等
+- `loop.index` / `loop.first` / `loop.last` 也可用
+
+**限制**（v2.2.1）：
+- 不支援巢狀 for（內層 `{% for c in case.children %}` 為 v2.2.2+ 規劃）
+- 內層 for marker 與外層 body 必須在不同 row（避免內層刪除 marker row 時把外層 body 一起刪掉）
+
+### 10.4 LAYOUT 隱藏工作表（覆寫 layout 設定）
+
+在 `.xlsx` 樣板內新增一張隱藏的 `LAYOUT` sheet，欄位 `key | value`，可覆寫：
+
+| key | 範例值 | 對應 LayoutConfig |
+|---|---|---|
+| `auto_fit_columns` | `True` / `False` | `auto_fit_columns` |
+| `image_max_width_px` | `480` | `image.max_width_px` |
+| `image_max_height_px` | `360` | `image.max_height_px` |
+| `template_engine_enabled` | `True` | `template_engine.enabled` |
+| `auto_flatten_lists` | `False` | `template_engine.auto_flatten_lists` |
+| `missing_variable` | `silent` | `template_engine.missing_variable` |
+
+LAYOUT sheet 在 renderer 完成後會自動從活頁簿移除，**不會出現在最終 .xlsx 內**。
+
+### 10.5 缺變數行為（`template_engine.missing_variable`）
+
+| 模式 | 行為 |
+|---|---|
+| `silent`（預設） | `{{missing}}` → 空字串 |
+| `keep` | 保留 `{{missing}}` 字面字串（除錯用） |
+| `error_format` | 套用 `error_format` 模板，例：`[ERROR: missing]` |
+
+設定方式（`config.yaml`）：
+
+```yaml
+excel:
+  template_engine:
+    missing_variable: "silent"
+    error_format: "[ERROR: 變數 '{var}' 不存在]"
+```
+
+### 10.6 CLI 範例
+
+```bash
+# 自動從樣板副檔名偵測
+python md2word.py render referance/sample_data.md templates/excel/sample_template.xlsx output.xlsx
+
+# 明確指定
+python md2word.py render data.md tpl.xlsx out.xlsx --format xlsx
+
+# 多模板批次（同資料夾內可同時含 .docx / .xlsx，各自決定輸出）
+python md2word.py batch-templates data.md ./templates ./out --no-validate
+```
+
+### 10.7 Python API
+
+```python
+from md_word_renderer.renderer.factory import build_renderer
+
+renderer = build_renderer(template_path="tpl.xlsx")  # 自動選 ExcelRenderer
+renderer.render_to_file(data, "tpl.xlsx", "out.xlsx")
+```
+
+或直接使用：
+
+```python
+from md_word_renderer.renderer.excel_renderer import ExcelRenderer
+from md_word_renderer.renderer.excel_layout import LayoutConfig, TemplateEngineConfig
+
+layout = LayoutConfig(
+    template_engine=TemplateEngineConfig(
+        enabled=True,
+        auto_flatten_lists=False,  # 純樣板驅動
+        missing_variable="silent",
+    )
+)
+renderer = ExcelRenderer(layout=layout)
+```
+
+### 10.8 向後相容（v2.2.0 → v2.2.1）
+
+| 場景 | v2.2.0 | v2.2.1（auto_flatten_lists=true，預設） |
+|---|---|---|
+| 樣板 B2 含 `{{系統名稱}}` | 不處理，append 新資料在後 | **替換** B2 為實際值 |
+| 樣板沒寫但資料有純量欄位 | append 22 列 | **不 append** |
+| list sheet 沒寫 `{% for %}` | auto-flatten | auto-flatten（v2.2.0 行為保留） |
+| list sheet 寫了 `{% for %}` | auto-flatten | 走 for 展開 |
+
+v2.2.0 使用者只要在 `config.yaml` 設定 `auto_flatten_lists: true`（預設值），既有 workflow 完全不受影響。
